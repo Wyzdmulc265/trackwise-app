@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
 import { queryExecute, queryOne } from '../db/client.js';
+import { withPrefix } from '../utils/ids.js';
 // Password hashing
 export const hashPassword = async (password) => {
     const saltRounds = 12;
@@ -31,7 +31,7 @@ export const storeRefreshToken = async (userId, token) => {
         throw new Error('User not found');
     const expiresAt = new Date(Date.now() + (parseInt(process.env.JWT_REFRESH_EXPIRY || '10080') * 60 * 1000)).toISOString();
     await queryExecute(`INSERT INTO refresh_tokens (id, tenant_id, user_id, token, expires_at, created_at, revoked)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`, [randomUUID(), user.tenant_id, userId, token, expiresAt, new Date().toISOString(), false]);
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`, [withPrefix('rt'), user.tenant_id, userId, token, expiresAt, new Date().toISOString(), false]);
 };
 export const verifyRefreshToken = async (token) => {
     try {
