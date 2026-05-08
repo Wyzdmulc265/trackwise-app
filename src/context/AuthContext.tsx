@@ -121,9 +121,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (result.error) {
       return { success: false, error: result.error };
     }
-    // Force logout all devices on password change
-    clearTokens();
-    setSession(null);
+    // Fetch updated session to check if password change is still required
+    const meResult = await authApi.getMe();
+    if (meResult.error || !meResult.data) {
+      // Fallback to logout if we can't fetch session
+      clearTokens();
+      setSession(null);
+    } else {
+      // Update session with fresh data
+      setSession(meResult.data.session);
+    }
     return { success: true };
   }, []);
 
