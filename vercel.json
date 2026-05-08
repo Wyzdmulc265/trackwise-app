@@ -4,40 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
-  "env": {
-    "NODE_ENV": {
-      "value": "production"
-    },
-    "JWT_SECRET": {
-      "description": "Secret key for JWT token signing - generate strong random string (32+ chars)",
-      "required": true
-    },
-    "JWT_REFRESH_SECRET": {
-      "description": "Secret key for JWT refresh token signing - generate strong random string (32+ chars)",
-      "required": true
-    },
-    "DATABASE_URL": {
-      "description": "PostgreSQL connection string - format: postgresql://user:password@host:port/database",
-      "required": true
-    },
-    "CORS_ORIGIN": {
-      "description": "Comma-separated list of allowed CORS origins - e.g., https://yourdomain.com",
-      "required": true
-    },
-    "JWT_EXPIRY": {
-      "value": "15"
-    },
-    "JWT_REFRESH_EXPIRY": {
-      "value": "10080"
-    },
-    "VITE_API_URL": {
-      "description": "Frontend API URL - should match your Vercel deployment URL",
-      "required": true
-    },
-    "PORT": {
-      "value": "3001"
-    }
-  },
   "functions": {
     "server/index.ts": {
       "memory": 1024,
