@@ -5,6 +5,26 @@ import { authenticate, requireAdmin, requireTenant } from '../middleware/auth.js
 import { NotFoundError } from '../middleware/errorHandler.js';
 const router = Router();
 // ─── GET all approvals ───────────────────────────────────────────────────────
+router.get('/pending', authenticate, requireAdmin, requireTenant, async (req, res) => {
+    try {
+        const { businessKey } = req.params;
+        const sql = `SELECT id, tenant_id, kind, action, payload, target_id, target_snapshot, requested_by, requested_at, status, reviewed_by, reviewed_at, review_notes
+               FROM pending_approvals WHERE tenant_id = $1 AND status = 'pending'
+               ORDER BY requested_at DESC`;
+        const approvals = await query(sql, [businessKey]);
+        const parsed = approvals.map((apr) => ({
+            ...apr,
+            payload: typeof apr.payload === 'string' ? JSON.parse(apr.payload) : apr.payload,
+            target_snapshot: typeof apr.target_snapshot === 'string' ? JSON.parse(apr.target_snapshot) : apr.target_snapshot,
+        }));
+        res.json({ approvals: parsed, count: parsed.length });
+    }
+    catch (error) {
+        console.error('List pending approvals error:', error);
+        res.status(500).json({ error: 'Failed to fetch pending approvals' });
+    }
+});
+// ——— GET all approvals ———
 router.get('/', authenticate, requireAdmin, requireTenant, async (req, res) => {
     try {
         const { businessKey } = req.params;

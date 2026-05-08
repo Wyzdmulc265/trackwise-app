@@ -41,13 +41,21 @@ export const storeRefreshToken = async (userId: string, token: string): Promise<
   const user = await queryOne<{ tenant_id: string }>('SELECT tenant_id FROM users WHERE id = $1', [userId]);
   if (!user) throw new Error('User not found');
 
-  const expiresAt = new Date(
-    Date.now() + (parseInt(process.env.JWT_REFRESH_EXPIRY || '10080') * 60 * 1000)
-  ).toISOString();
+  const refreshMins = parseInt(process.env.JWT_REFRESH_EXPIRY || '10080');
+  const expiresAt = new Date(Date.now() + refreshMins * 60 * 1000).toISOString();
 
+  // Prevent duplicate refresh token inserts (refresh_tokens.token is UNIQUE)
+  // If the exact token already exists, just re-activate/update its expiry.
   await queryExecute(
     `INSERT INTO refresh_tokens (id, tenant_id, user_id, token, expires_at, created_at, revoked)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (token)
+     DO UPDATE SET
+       revoked = EXCLUDED.revoked,
+       expires_at = EXCLUDED.expires_at,
+       tenant_id = EXCLUDED.tenant_id,
+       user_id = EXCLUDED.user_id,
+       created_at = refresh_tokens.created_at`,
     [withPrefix('rt'), user.tenant_id, userId, token, expiresAt, new Date().toISOString(), false]
   );
 };
