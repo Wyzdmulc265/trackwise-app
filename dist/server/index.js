@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
 import categoriesRoutes from './routes/categories.js';
@@ -133,6 +135,20 @@ app.use('/api/categories', categoriesRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/transactions', transactionsRoutes);
 app.use('/api/approvals', approvalsRoutes);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendRoot = path.resolve(__dirname, '..');
+const frontendIndex = path.join(frontendRoot, 'index.html');
+app.use(express.static(frontendRoot, { index: false }));
+app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api/')) {
+        return next();
+    }
+    res.sendFile(frontendIndex, (err) => {
+        if (err)
+            next(err);
+    });
+});
 app.use(notFoundHandler);
 app.use(errorHandler);
 const PORT = process.env.PORT || 3001;
