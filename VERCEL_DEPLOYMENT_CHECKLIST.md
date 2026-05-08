@@ -26,8 +26,8 @@
 - **Issue**: `DATABASE_URL` in `.env` points to `localhost:5432`
 - **Problem**: Vercel can't access your local PostgreSQL
 - **Solution**: 
-  - Use Azure Database for PostgreSQL (already have Bicep infrastructure)
-  - Or use Vercel's PostgreSQL (if on Pro plan)
+  - Use Neon PostgreSQL (recommended for Vercel)
+  - Or use Vercel's PostgreSQL / another managed provider
   - Configure in Vercel environment variables
 - **Priority**: CRITICAL
 

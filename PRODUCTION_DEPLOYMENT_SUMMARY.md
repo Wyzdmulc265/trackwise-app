@@ -35,7 +35,7 @@ Your app has **5 CRITICAL issues** that must be fixed before deploying to produc
 
 3. **PostgreSQL Database Not Configured for Production**
    - Localhost connection won't work on Vercel
-   - Need: Azure PostgreSQL or other managed service
+   - Need: Neon PostgreSQL or other managed service
    - Action: Provision database before deploying
 
 4. **Environment Variables Not Managed Securely**
@@ -168,7 +168,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 |-------|--------|-----------|
 | Vercel functions have 12s timeout | Long queries may timeout | Optimize queries, use connection pooling |
 | Cold starts on new functions | First request slower | Use Vercel's built-in caching |
-| PostgreSQL must be external | Can't use Vercel's built-in DB | Use Azure, Supabase, Railway, etc. |
+| PostgreSQL must be external | Can't use Vercel's built-in DB | Use Neon, Supabase, Railway, etc. |
 | Full-stack in one repo | Deployment complexity | Recommended: Separate frontend/backend |
 | Rate limiting configured | API may be throttled | Adjust limits in `server/index.ts` if needed |
 
@@ -181,9 +181,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ### Database connection fails
 - Verify `DATABASE_URL` format (should be `postgresql://user:pass@host:port/db`)
-- Check firewall rules on database server
-- For Azure: Add Vercel IPs to firewall
-- Test locally: `psql $DATABASE_URL -c "SELECT 1"`
+- For Neon: use the production branch connection URL and ensure the Neon password is correct
+- For managed providers with firewall rules: allow Vercel or use public access if supported
+- Test locally: `psql "$DATABASE_URL" -c "SELECT 1"`
 
 ### CORS errors in browser
 - Update `CORS_ORIGIN` in Vercel environment variables
@@ -222,7 +222,7 @@ pg_dump $DATABASE_URL > backup.sql
 # Restore from backup
 psql $DATABASE_URL < backup.sql
 
-# For Azure: Configure automated backups in Azure Portal
+# For Neon: configure branch protection, backups, and follower policies in the Neon dashboard
 ```
 
 ## Security Checklist Before Going Live
@@ -242,7 +242,7 @@ psql $DATABASE_URL < backup.sql
 
 - 📚 [Vercel Documentation](https://vercel.com/docs)
 - 🐘 [PostgreSQL Connection Strings](https://www.postgresql.org/docs/current/libpq-connect.html)
-- ☁️ [Azure Database for PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/)
+- 🌩️ [Neon PostgreSQL](https://neon.tech/docs)
 - 🔐 [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
 - 🛡️ [Express Security Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
 

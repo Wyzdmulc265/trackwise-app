@@ -4,7 +4,7 @@
 
 - [x] GitHub account with repository pushed
 - [x] Vercel account (https://vercel.com)
-- [x] PostgreSQL database (Azure or other managed service)
+- [x] PostgreSQL database (Neon recommended, or other managed service)
 - [x] Production secrets generated (JWT_SECRET, JWT_REFRESH_SECRET)
 
 ## Step 1: Prepare Production Secrets
@@ -23,25 +23,15 @@ Save these values securely - you'll need them in Vercel dashboard.
 
 ## Step 2: Set Up PostgreSQL Database
 
-### Option A: Azure Database for PostgreSQL (Recommended - Already have Bicep infrastructure)
+### Option A: Neon PostgreSQL (Recommended for Vercel)
 
-```bash
-# Using the existing Bicep template
-az group create --name trackwise-prod --location eastus
+1. Create a Neon project at https://neon.tech
+2. Create a production branch and a PostgreSQL database
+3. Copy the Neon `CONNECTION STRING` for your production branch
 
-az deployment group create \
-  --name trackwise-db \
-  --resource-group trackwise-prod \
-  --template-file infrastructure/postgresql.bicep \
-  --parameters infrastructure/postgresql.parameters.json
+**Important**: Use the Neon `postgresql://` connection string and keep the password secret.
 
-# Get connection string
-az postgres flexible-server show-connection-string \
-  --server-name <your-server-name> \
-  --admin-user trackwise_admin
-```
-
-### Option B: Managed PostgreSQL Service (Railway, Supabase, etc.)
+### Option B: Managed PostgreSQL Service (Azure, Supabase, Railway, etc.)
 
 Use their provided connection string.
 
@@ -102,7 +92,7 @@ JWT_SECRET = [generated-secret-from-step-1]
 JWT_REFRESH_SECRET = [generated-secret-from-step-1]
 
 DATABASE_URL = postgresql://user:password@host:port/database
-  Example: postgresql://trackwise_admin:secure_pass@myserver.postgres.database.azure.com:5432/trackwise
+  Example (Neon): postgresql://trackwise_admin:secure_pass@org-name.project-name.neon.tech:5432/trackwise
 
 CORS_ORIGIN = https://trackwise-production.vercel.app
   (Replace with your actual Vercel domain or custom domain)
@@ -243,7 +233,7 @@ Error: connect ECONNREFUSED at PostgreSQL server
 → Fix: 
   1. Verify DATABASE_URL in Vercel environment variables
   2. Check if PostgreSQL server firewall allows Vercel IPs
-  3. For Azure: Add Vercel IP to firewall rules
+  3. For Neon: use the production branch connection URL and ensure the password is correct
 ```
 
 ### Rate Limiting Issues
@@ -266,14 +256,13 @@ Set up monitoring for `/health` endpoint:
 ### Database Backups
 
 ```bash
-# Automated backups in Azure
-# Set in Azure Portal → PostgreSQL → Backup
+# For Neon: configure branch protection, backups, and followers in the Neon dashboard
 
 # Manual backup
-pg_dump $DATABASE_URL > backup.sql
+pg_dump "$DATABASE_URL" > backup.sql
 
 # Restore from backup
-psql $DATABASE_URL < backup.sql
+psql "$DATABASE_URL" < backup.sql
 ```
 
 ### View Production Logs
@@ -324,5 +313,5 @@ vercel promote [deployment-url] --prod
 
 - [Vercel Documentation](https://vercel.com/docs)
 - [PostgreSQL Connection Strings](https://www.postgresql.org/docs/current/libpq-connect.html)
-- [Azure Database for PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/)
+- [Neon PostgreSQL](https://neon.tech/docs)
 - [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
