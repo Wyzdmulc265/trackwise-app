@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { query, queryExecute, withTransaction } from '../db/client';
-import { authenticate, requireAdmin, requireTenant } from '../middleware/auth';
-import { NotFoundError } from '../middleware/errorHandler';
+import { query, queryExecute, withTransaction } from '../db/client.js';
+import { authenticate, requireAdmin, requireTenant } from '../middleware/auth.js';
+import { NotFoundError } from '../middleware/errorHandler.js';
 const router = Router();
 // ─── GET all approvals ───────────────────────────────────────────────────────
 router.get('/', authenticate, requireAdmin, requireTenant, async (req, res) => {

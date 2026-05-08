@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { query, queryOne, queryExecute, withTransaction } from '../db/client';
-import { authenticate, requireTenant } from '../middleware/auth';
-import { ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { query, queryOne, queryExecute, withTransaction } from '../db/client.js';
+import { authenticate, requireTenant } from '../middleware/auth.js';
+import { ValidationError, NotFoundError } from '../middleware/errorHandler.js';
 const router = Router();
 // ─── GET all transactions for tenant ─────────────────────────────────────────
 router.get('/', authenticate, requireTenant, async (req, res) => {
