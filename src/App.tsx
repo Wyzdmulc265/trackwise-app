@@ -10,6 +10,7 @@ import { Categories } from './components/Categories';
 import { Reports } from './components/Reports';
 import { Approvals } from './components/Approvals';
 import { UserManagement } from './components/UserManagement';
+import { Profile } from './components/Profile';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
@@ -25,6 +26,7 @@ const TAB_ACCESS: Record<string, UserRole[]> = {
   reports:      ['Admin', 'Accountant', 'Viewer'],
   approvals:    ['Admin', 'Accountant'],
   users:        ['Admin'],
+  profile:      ['Admin', 'Accountant', 'Viewer'],
 };
 
 // Inner app content (authenticated)
@@ -53,6 +55,7 @@ const AppContent: React.FC = () => {
       case 'reports':      return <Reports />;
       case 'approvals':    return <Approvals />;
       case 'users':        return <UserManagement />;
+      case 'profile':      return <Profile />;
       default:             return <Dashboard />;
     }
   };
@@ -67,6 +70,7 @@ const AppContent: React.FC = () => {
       case 'reports':      return 'Reports & Business Intelligence';
       case 'approvals':    return role === 'Admin' ? 'Pending Approvals' : 'My Approval Requests';
       case 'users':        return 'User & Access Management';
+      case 'profile':      return 'Profile Settings';
       default:             return 'TrackWise Workspace';
     }
   };

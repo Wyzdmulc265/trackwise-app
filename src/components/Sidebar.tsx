@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import {
   LayoutDashboard, Receipt, History, BarChart3, Tags, Package,
-  AlertTriangle, ShieldCheck, Users, ClipboardList,
+  AlertTriangle, ShieldCheck, Users, ClipboardList, UserCog,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -36,6 +36,7 @@ export const Sidebar: React.FC = () => {
                          roles: ['Admin', 'Accountant'],
                          badge: role === 'Admin' ? (pendingApprovals || null) : (myPending || null) },
     { id: 'users',       name: 'User Management',    icon: Users,           roles: ['Admin'] },
+    { id: 'profile',     name: 'Profile',            icon: UserCog,         roles: ['Admin', 'Accountant', 'Viewer'] },
   ];
 
   const menuItems = allMenu.filter((m) => m.roles.includes(role));
