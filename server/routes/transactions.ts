@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { query, queryOne, queryExecute, withTransaction } from '../db/client';
-import { authenticate, requireTenant } from '../middleware/auth';
-import { withPrefix } from '../utils/ids';
-import { ValidationError, NotFoundError } from '../middleware/errorHandler';
-import { AuthPayload } from '../types';
+import { query, queryOne, queryExecute, withTransaction } from '../db/client.js';
+import { authenticate, requireTenant } from '../middleware/auth.js';
+import { withPrefix } from '../utils/ids.js';
+import { ValidationError, NotFoundError } from '../middleware/errorHandler.js';
+import { AuthPayload } from '../types.js';
 
 const router = Router();
 

@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { PoolClient } from 'pg';
-import { query, queryExecute, withTransaction } from '../db/client';
-import { authenticate, requireAdmin, requireTenant } from '../middleware/auth';
-import { ValidationError, NotFoundError } from '../middleware/errorHandler';
-import { AuthPayload } from '../types';
+import { query, queryExecute, withTransaction } from '../db/client.js';
+import { authenticate, requireAdmin, requireTenant } from '../middleware/auth.js';
+import { ValidationError, NotFoundError } from '../middleware/errorHandler.js';
+import { AuthPayload } from '../types.js';
 
 const router = Router();
 
