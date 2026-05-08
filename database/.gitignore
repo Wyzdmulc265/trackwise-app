@@ -1,0 +1,32 @@
+# Database files to ignore
+*.log
+*.tmp
+*.bak
+
+# Sensitive configuration files
+config.local.*
+secrets.*
+*.env
+
+# Backup files
+*.backup
+*.dump
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+temp/
+tmp/
