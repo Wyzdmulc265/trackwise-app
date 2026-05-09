@@ -18,14 +18,15 @@ export const Inventory: React.FC = () => {
     setTimeout(() => setToast(null), 4500);
   };
 
-  // Creation state
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [name, setName] = useState('');
-  const [sku, setSku] = useState('');
-  const [unitCost, setUnitCost] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [threshold, setThreshold] = useState('5');
+   // Creation state
+   const [showAddForm, setShowAddForm] = useState(false);
+   const [name, setName] = useState('');
+   const [sku, setSku] = useState('');
+   const [unitCost, setUnitCost] = useState('');
+   const [unitPrice, setUnitPrice] = useState('');
+   const [quantity, setQuantity] = useState('');
+   const [threshold, setThreshold] = useState('5');
+   const [measurementUnit, setMeasurementUnit] = useState('Pieces');
 
   // Editing modal state
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -187,7 +188,7 @@ export const Inventory: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="unitCost" className="block text-[11px] font-semibold text-slate-500 mb-1">Unit Cost Basis ($)</label>
+              <label htmlFor="unitCost" className="block text-[11px] font-semibold text-slate-500 mb-1">Unit Cost Basis (MWK)</label>
               <input
                 id="unitCost"
                 name="unitCost"
@@ -204,7 +205,7 @@ export const Inventory: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="unitPrice" className="block text-[11px] font-semibold text-slate-500 mb-1">Target Sale Price ($)</label>
+              <label htmlFor="unitPrice" className="block text-[11px] font-semibold text-slate-500 mb-1">Target Sale Price (MWK)</label>
               <input
                 id="unitPrice"
                 name="unitPrice"
@@ -389,7 +390,7 @@ export const Inventory: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label htmlFor="edit-unitCost" className="block text-[11px] font-bold text-slate-500 mb-1">Cost Basis ($)</label>
+                  <label htmlFor="edit-unitCost" className="block text-[11px] font-bold text-slate-500 mb-1">Cost Basis (MWK)</label>
                   <input
                     id="edit-unitCost"
                     name="unitCost"
@@ -403,7 +404,7 @@ export const Inventory: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="edit-unitPrice" className="block text-[11px] font-bold text-slate-500 mb-1">Sale Price ($)</label>
+                  <label htmlFor="edit-unitPrice" className="block text-[11px] font-bold text-slate-500 mb-1">Sale Price (MWK)</label>
                   <input
                     id="edit-unitPrice"
                     name="unitPrice"

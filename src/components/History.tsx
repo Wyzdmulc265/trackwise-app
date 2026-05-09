@@ -315,7 +315,7 @@ export const History: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Amount ($ value)</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Amount (MWK value)</label>
                 <input
                   type="number"
                   step="0.01"

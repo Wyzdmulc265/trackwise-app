@@ -48,6 +48,73 @@ export const Approvals: React.FC = () => {
     return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'MWK' }).format(value);
+
+  const labelForKey = (key: string) => {
+    switch (key) {
+      case 'date': return 'Date';
+      case 'type': return 'Type';
+      case 'category': return 'Category';
+      case 'amount': return 'Amount';
+      case 'description': return 'Description';
+      case 'itemId': return 'Item ID';
+      case 'quantity': return 'Quantity';
+      case 'name': return 'Name';
+      case 'sku': return 'SKU';
+      case 'unitCost': return 'Unit cost';
+      case 'unitPrice': return 'Unit price';
+      case 'lowStockThreshold': return 'Low stock threshold';
+      case 'salesCount': return 'Sales count';
+      case 'revenue': return 'Revenue';
+      case 'cogs': return 'COGS';
+      default: return key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+    }
+  };
+
+  const renderKeyValue = (label: string, value: React.ReactNode) => (
+    <div className="flex items-start gap-2 text-sm leading-6">
+      <span className="font-semibold text-slate-600 min-w-[110px]">{label}</span>
+      <span className="text-slate-800 break-words">{value}</span>
+    </div>
+  );
+
+  const renderObjectDetails = (obj: Record<string, any>) => (
+    <div className="space-y-2 text-sm">
+      {Object.entries(obj)
+        .filter(([, value]) => value !== null && value !== undefined && value !== '')
+        .map(([key, value]) => {
+          const label = labelForKey(key);
+          const displayValue = key === 'amount' && typeof value === 'number'
+            ? formatCurrency(value)
+            : key === 'date' && typeof value === 'string'
+            ? new Date(value).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+            : String(value);
+          return <div key={key}>{renderKeyValue(label, displayValue)}</div>;
+        })}
+    </div>
+  );
+
+  const renderApprovalDetails = (payload: PendingApproval['payload'], kind: PendingApproval['kind'], action: PendingApproval['action']) => {
+    if (action === 'delete') {
+      return <p className="text-sm text-slate-700">Delete this record.</p>;
+    }
+
+    if (kind === 'transaction' && payload && typeof payload === 'object') {
+      return renderObjectDetails(payload as Record<string, any>);
+    }
+
+    if (kind === 'inventory' && payload && typeof payload === 'object') {
+      return renderObjectDetails(payload as Record<string, any>);
+    }
+
+    return (
+      <pre className="font-mono text-slate-700 whitespace-pre-wrap break-words text-sm">
+        {JSON.stringify(payload, null, 2)}
+      </pre>
+    );
+  };
+
   const handleReject = () => {
     if (!rejecting) return;
     rejectRequest(rejecting.id, rejectionReason || undefined);
@@ -172,21 +239,22 @@ export const Approvals: React.FC = () => {
 
                 {/* Detail payload */}
                 {(a.payload || a.targetSnapshot) && (
-                  <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                  <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {a.targetSnapshot && (
                       <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                         <p className="font-bold text-slate-500 uppercase text-[10px] tracking-wider mb-1.5">Current value</p>
-                        <pre className="font-mono text-slate-700 whitespace-pre-wrap break-words text-[10px]">{JSON.stringify(a.targetSnapshot, null, 2)}</pre>
+                        {typeof a.targetSnapshot === 'object'
+                          ? renderApprovalDetails(a.targetSnapshot as PendingApproval['payload'], a.kind, a.action)
+                          : <pre className="font-mono text-slate-700 whitespace-pre-wrap break-words text-sm">{JSON.stringify(a.targetSnapshot, null, 2)}</pre>
+                        }
                       </div>
                     )}
                     {a.payload && (
                       <div className="bg-emerald-50/50 rounded-xl p-3 border border-emerald-100">
                         <p className="font-bold text-emerald-700 uppercase text-[10px] tracking-wider mb-1.5">
-                          {a.action === 'delete' ? 'Action' : 'Proposed value'}
+                          {a.action === 'delete' ? 'Action' : 'Proposed transaction'}
                         </p>
-                        <pre className="font-mono text-slate-700 whitespace-pre-wrap break-words text-[10px]">
-                          {a.action === 'delete' ? 'DELETE this record' : JSON.stringify(a.payload, null, 2)}
-                        </pre>
+                        {renderApprovalDetails(a.payload, a.kind, a.action)}
                       </div>
                     )}
                   </div>

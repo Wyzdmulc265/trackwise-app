@@ -34,17 +34,18 @@ export interface Category {
 }
 
 export interface InventoryItem {
-  id: string;
-  name: string;
-  sku: string;
-  unitCost: number;
-  unitPrice: number;
-  quantity: number;
-  lowStockThreshold: number;
-  salesCount: number;
-  revenue: number;
-  cogs: number;
-}
+   id: string;
+   name: string;
+   sku: string;
+   unitCost: number;
+   unitPrice: number;
+   quantity: number;
+   lowStockThreshold: number;
+   salesCount: number;
+   revenue: number;
+   cogs: number;
+   measurementUnit: string;
+ }
 
 export interface Transaction {
   id: string;
