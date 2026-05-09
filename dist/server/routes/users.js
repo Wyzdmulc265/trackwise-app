@@ -39,7 +39,7 @@ router.post('/', authenticate, requireAdmin, requireTenant, async (req, res) => 
         const passwordHash = await hashPassword(tempPassword);
         const userId = withPrefix('usr');
         await queryExecute(`INSERT INTO users (id, tenant_id, owner_name, username, business_name, contact, password_hash, role, must_change_password, created_at, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), $10)`, [userId, businessKey, ownerName, username, adminUser.businessName, contact, passwordHash, role, true, adminUser.username]);
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), $10)`, [userId, businessKey, ownerName, username, adminUser.businessName, contact, passwordHash, role, false, adminUser.username]);
         const createdUser = await queryOne(`SELECT id, tenant_id, owner_name, username, business_name, contact, role, must_change_password, created_at, created_by
        FROM users WHERE id = $1`, [userId]);
         res.status(201).json({ user: createdUser, message: 'User created successfully' });

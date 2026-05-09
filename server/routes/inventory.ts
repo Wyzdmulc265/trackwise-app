@@ -12,7 +12,7 @@ router.get('/', authenticate, requireTenant, async (req: Request, res: Response)
   try {
     const { businessKey } = req.params;
     const items = await query<any>(
-      `SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, created_at, updated_at
+      `SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, cogs, created_at, updated_at
        FROM inventory_items WHERE tenant_id = $1 ORDER BY name`,
       [businessKey]
     );
@@ -47,7 +47,7 @@ router.get('/:itemId', authenticate, requireTenant, async (req: Request, res: Re
   try {
     const { businessKey, itemId } = req.params;
     const item = await queryOne<any>(
-      `SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, created_at, updated_at
+      `SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, cogs, created_at, updated_at
        FROM inventory_items WHERE id = $1 AND tenant_id = $2`,
       [itemId, businessKey]
     );

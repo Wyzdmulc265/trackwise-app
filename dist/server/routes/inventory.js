@@ -8,7 +8,7 @@ const router = Router();
 router.get('/', authenticate, requireTenant, async (req, res) => {
     try {
         const { businessKey } = req.params;
-        const items = await query(`SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, created_at, updated_at
+        const items = await query(`SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, cogs, created_at, updated_at
        FROM inventory_items WHERE tenant_id = $1 ORDER BY name`, [businessKey]);
         res.json({ inventory: items, count: items.length });
     }
@@ -35,7 +35,7 @@ router.get('/low-stock', authenticate, requireTenant, async (req, res) => {
 router.get('/:itemId', authenticate, requireTenant, async (req, res) => {
     try {
         const { businessKey, itemId } = req.params;
-        const item = await queryOne(`SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, created_at, updated_at
+        const item = await queryOne(`SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, cogs, created_at, updated_at
        FROM inventory_items WHERE id = $1 AND tenant_id = $2`, [itemId, businessKey]);
         if (!item) {
             throw new NotFoundError('Inventory item');

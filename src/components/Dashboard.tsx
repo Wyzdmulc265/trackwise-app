@@ -43,11 +43,15 @@ export const Dashboard: React.FC = () => {
 
   const filteredTx = filterTransactions(transactions, timeFilter);
 
-  // Compute stats
-  const sales = filteredTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
-  const purchases = filteredTx.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
-  const expenses = filteredTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-  const netProfit = sales - purchases - expenses;
+   // Compute stats
+   const sales = filteredTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
+   const purchases = filteredTx.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
+   const expenses = filteredTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+   
+   // Calculate COGS from inventory (lifetime COGS of all items)
+   const cogs = inventory.reduce((sum, item) => sum + item.cogs, 0);
+   const grossProfit = sales - cogs;
+   const netProfit = grossProfit - expenses;
 
   // Inventory stats
   const totalStockItems = inventory.reduce((sum, item) => sum + item.quantity, 0);

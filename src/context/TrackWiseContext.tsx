@@ -28,7 +28,7 @@ interface TrackWiseContextProps {
   deleteTransaction: (id: string) => Promise<MutationResult>;
 
   // Inventory mutations (role-aware)
-  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'salesCount' | 'revenue'>) => Promise<MutationResult>;
+  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'salesCount' | 'revenue' | 'cogs'>) => Promise<MutationResult>;
   updateInventoryItem: (id: string, item: Partial<InventoryItem>) => Promise<MutationResult>;
   deleteInventoryItem: (id: string) => Promise<MutationResult>;
 
@@ -84,7 +84,22 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Initial data load
   useEffect(() => {
     if (session) {
-      refreshAll();
+      // Avoid calling admin-only approvals endpoint for non-admin users
+      if (session.role === 'Admin') {
+        refreshAll();
+      } else {
+        // Only load non-approval data
+        setIsLoading(true);
+        Promise.all([transactionsApi.list(), inventoryApi.list(), categoriesApi.list()])
+          .then(([txRes, invRes, catRes]) => {
+            if (txRes.data) setTransactions(txRes.data.transactions);
+            if (invRes.data) setInventory(invRes.data.inventory);
+            if (catRes.data) setCategories(catRes.data.categories);
+            setApprovals([]); // no admin approvals for accountants
+          })
+          .catch((error) => console.error('Failed to load data:', error))
+          .finally(() => setIsLoading(false));
+      }
     } else {
       setTransactions([]);
       setInventory([]);
@@ -92,6 +107,45 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setApprovals([]);
     }
   }, [session, refreshAll]);
+
+  // Real-time-ish sync for approvals: keep pending approvals updated across sessions
+  useEffect(() => {
+    // NOTE:
+    // GET /api/approvals/pending is admin-only (403 for accountants).
+    // Poll only when the logged-in user is an Admin.
+    if (!session) return;
+    if (session.role !== 'Admin') return;
+
+    let cancelled = false;
+
+    let inFlight = false;
+
+    const syncPendingApprovals = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const aprRes = await approvalsApi.list('pending');
+        if (cancelled) return;
+        if (aprRes.data) setApprovals(aprRes.data.approvals);
+      } catch (e) {
+        console.error('Failed to sync pending approvals:', e);
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    // Do an immediate sync (so it feels instant when switching tabs/users)
+    syncPendingApprovals();
+
+    const intervalMs = 5000;
+    const id = window.setInterval(syncPendingApprovals, intervalMs);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [session]);
+
 
   // ─── Transaction mutations ────────────────────────────────────────────────
   const addTransaction = useCallback(async (data: Omit<Transaction, 'id'>): Promise<MutationResult> => {
@@ -196,7 +250,7 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [session]);
 
   // ─── Inventory mutations ───────────────────────────────────────────────────
-  const addInventoryItem = useCallback(async (data: Omit<InventoryItem, 'id' | 'salesCount' | 'revenue'>): Promise<MutationResult> => {
+  const addInventoryItem = useCallback(async (data: Omit<InventoryItem, 'id' | 'salesCount' | 'revenue' | 'cogs'>): Promise<MutationResult> => {
     if (!session) return { ok: false, message: 'Not authenticated' };
 
     setIsSubmitting(true);

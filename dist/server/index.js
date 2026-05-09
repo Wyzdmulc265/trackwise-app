@@ -110,12 +110,18 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 app.use('/api/', limiter);
+// Auth-specific limiter:
+// Apply ONLY to endpoints that can trigger brute-force attempts, so correct logins
+// and other auth flows (like /me) are not accidentally blocked.
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5,
+    max: 20,
     message: { error: 'Too many authentication attempts, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
-app.use('/api/auth/', authLimiter);
+app.post('/api/auth/login', authLimiter);
+app.post('/api/auth/refresh', authLimiter);
 if (process.env.NODE_ENV === 'development') {
     app.use((req, _res, next) => {
         console.log(`${req.method} ${req.path}`);

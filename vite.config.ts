@@ -3,6 +3,7 @@ import { fileURLToPath } from "url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { viteSingleFile } from "vite-plugin-singlefile";
+
 import { defineConfig, type ConfigEnv } from "vite";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,12 +13,14 @@ export default defineConfig(({ mode }: ConfigEnv) => {
   const isProduction = mode === "production";
 
   const plugins = [react(), tailwindcss()];
+  const prodPlugins: any[] = [];
   if (isProduction) {
-    plugins.push(viteSingleFile());
+    const single = viteSingleFile();
+    if (single) prodPlugins.push(single as any);
   }
 
   return {
-    plugins,
+    plugins: [...plugins, ...prodPlugins],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),

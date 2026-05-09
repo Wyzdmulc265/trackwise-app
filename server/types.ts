@@ -44,6 +44,7 @@ export interface InventoryItem {
   low_stock_threshold: number;
   sales_count: number;
   revenue: number;
+  cogs: number;
   created_at: string;
   updated_at: string;
 }

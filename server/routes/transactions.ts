@@ -159,7 +159,13 @@ router.post('/', authenticate, requireTenant, async (req: Request, res: Response
       if (itemId && quantity) {
         if (type === 'sale') {
           await client.query(
-            `UPDATE inventory_items SET quantity = GREATEST(0, quantity - $1), sales_count = sales_count + $1, revenue = revenue + $2, updated_at = NOW() WHERE id = $3`,
+            `UPDATE inventory_items
+               SET quantity = GREATEST(0, quantity - $1),
+                   sales_count = sales_count + $1,
+                   revenue = revenue + $2,
+                   cogs = cogs + ($1 * unit_cost),
+                   updated_at = NOW()
+             WHERE id = $3`,
             [quantity, amount, itemId]
           );
         } else if (type === 'purchase') {
@@ -265,7 +271,12 @@ router.put('/:txId', authenticate, requireTenant, async (req: Request, res: Resp
         if (oldItemId && oldQty) {
           if (oldType === 'sale') {
             await client.query(
-              `UPDATE inventory_items SET quantity = quantity + $1, revenue = revenue - $2 WHERE id = $3`,
+              `UPDATE inventory_items
+                 SET quantity = quantity + $1,
+                     sales_count = GREATEST(0, sales_count - $1),
+                     revenue = revenue - $2,
+                     cogs = cogs - ($1 * unit_cost)
+               WHERE id = $3`,
               [oldQty, oldAmount, oldItemId]
             );
           } else if (oldType === 'purchase') {
@@ -279,7 +290,12 @@ router.put('/:txId', authenticate, requireTenant, async (req: Request, res: Resp
         if (newItemId && newQty) {
           if (newType === 'sale') {
             await client.query(
-              `UPDATE inventory_items SET quantity = GREATEST(0, quantity - $1), revenue = revenue + $2 WHERE id = $3`,
+              `UPDATE inventory_items
+                 SET quantity = GREATEST(0, quantity - $1),
+                     sales_count = sales_count + $1,
+                     revenue = revenue + $2,
+                     cogs = cogs + ($1 * unit_cost)
+               WHERE id = $3`,
               [newQty, newAmount, newItemId]
             );
           } else if (newType === 'purchase') {
@@ -289,6 +305,11 @@ router.put('/:txId', authenticate, requireTenant, async (req: Request, res: Resp
             );
           }
         }
+      } else if (oldItemId && oldQty && oldType === 'sale' && newItemId && newQty && newType === 'sale' && oldItemId === newItemId && oldQty === newQty && oldAmount !== newAmount) {
+        await client.query(
+          `UPDATE inventory_items SET revenue = revenue + $1 WHERE id = $2`,
+          [newAmount - oldAmount, newItemId]
+        );
       }
     });
 
@@ -342,7 +363,12 @@ router.delete('/:txId', authenticate, requireTenant, async (req: Request, res: R
       if (existingTx.item_id && existingTx.quantity) {
         if (existingTx.type === 'sale') {
           await client.query(
-            `UPDATE inventory_items SET quantity = quantity + $1, revenue = revenue - $2, sales_count = sales_count - $3 WHERE id = $4`,
+          `UPDATE inventory_items
+             SET quantity = quantity + $1,
+                 revenue = revenue - $2,
+                 sales_count = sales_count - $3,
+                   cogs = cogs - ($1 * unit_cost)
+           WHERE id = $4`,
             [existingTx.quantity, existingTx.amount, existingTx.quantity, existingTx.item_id]
           );
         } else if (existingTx.type === 'purchase') {

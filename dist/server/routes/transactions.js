@@ -126,7 +126,13 @@ router.post('/', authenticate, requireTenant, async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`, [txId, businessKey, type, date, category, amount, description, itemId || null, quantity || null, user.username]);
             if (itemId && quantity) {
                 if (type === 'sale') {
-                    await client.query(`UPDATE inventory_items SET quantity = GREATEST(0, quantity - $1), sales_count = sales_count + $1, revenue = revenue + $2, updated_at = NOW() WHERE id = $3`, [quantity, amount, itemId]);
+                    await client.query(`UPDATE inventory_items
+               SET quantity = GREATEST(0, quantity - $1),
+                   sales_count = sales_count + $1,
+                   revenue = revenue + $2,
+                   cogs = cogs + ($1 * unit_cost),
+                   updated_at = NOW()
+             WHERE id = $3`, [quantity, amount, itemId]);
                 }
                 else if (type === 'purchase') {
                     await client.query(`UPDATE inventory_items SET quantity = quantity + $1, updated_at = NOW() WHERE id = $2`, [quantity, itemId]);
@@ -228,7 +234,12 @@ router.put('/:txId', authenticate, requireTenant, async (req, res) => {
             if (oldItemId !== newItemId || oldQty !== newQty || oldType !== newType) {
                 if (oldItemId && oldQty) {
                     if (oldType === 'sale') {
-                        await client.query(`UPDATE inventory_items SET quantity = quantity + $1, revenue = revenue - $2 WHERE id = $3`, [oldQty, oldAmount, oldItemId]);
+                        await client.query(`UPDATE inventory_items
+                 SET quantity = quantity + $1,
+                     sales_count = GREATEST(0, sales_count - $1),
+                     revenue = revenue - $2,
+                     cogs = cogs - ($1 * unit_cost)
+               WHERE id = $3`, [oldQty, oldAmount, oldItemId]);
                     }
                     else if (oldType === 'purchase') {
                         await client.query(`UPDATE inventory_items SET quantity = quantity - $1 WHERE id = $2`, [oldQty, oldItemId]);
@@ -236,12 +247,20 @@ router.put('/:txId', authenticate, requireTenant, async (req, res) => {
                 }
                 if (newItemId && newQty) {
                     if (newType === 'sale') {
-                        await client.query(`UPDATE inventory_items SET quantity = GREATEST(0, quantity - $1), revenue = revenue + $2 WHERE id = $3`, [newQty, newAmount, newItemId]);
+                        await client.query(`UPDATE inventory_items
+                 SET quantity = GREATEST(0, quantity - $1),
+                     sales_count = sales_count + $1,
+                     revenue = revenue + $2,
+                     cogs = cogs + ($1 * unit_cost)
+               WHERE id = $3`, [newQty, newAmount, newItemId]);
                     }
                     else if (newType === 'purchase') {
                         await client.query(`UPDATE inventory_items SET quantity = quantity + $1 WHERE id = $2`, [newQty, newItemId]);
                     }
                 }
+            }
+            else if (oldItemId && oldQty && oldType === 'sale' && newItemId && newQty && newType === 'sale' && oldItemId === newItemId && oldQty === newQty && oldAmount !== newAmount) {
+                await client.query(`UPDATE inventory_items SET revenue = revenue + $1 WHERE id = $2`, [newAmount - oldAmount, newItemId]);
             }
         });
         const updated = await queryOne('SELECT * FROM transactions WHERE id = $1', [txId]);
@@ -286,7 +305,12 @@ router.delete('/:txId', authenticate, requireTenant, async (req, res) => {
         await withTransaction(async (client) => {
             if (existingTx.item_id && existingTx.quantity) {
                 if (existingTx.type === 'sale') {
-                    await client.query(`UPDATE inventory_items SET quantity = quantity + $1, revenue = revenue - $2, sales_count = sales_count - $3 WHERE id = $4`, [existingTx.quantity, existingTx.amount, existingTx.quantity, existingTx.item_id]);
+                    await client.query(`UPDATE inventory_items
+             SET quantity = quantity + $1,
+                 revenue = revenue - $2,
+                 sales_count = sales_count - $3,
+                   cogs = cogs - ($1 * unit_cost)
+           WHERE id = $4`, [existingTx.quantity, existingTx.amount, existingTx.quantity, existingTx.item_id]);
                 }
                 else if (existingTx.type === 'purchase') {
                     await client.query(`UPDATE inventory_items SET quantity = quantity - $1 WHERE id = $2`, [existingTx.quantity, existingTx.item_id]);

@@ -30,17 +30,21 @@ export const Reports: React.FC = () => {
 
   // 1. Daily Profit Summary calculations
   const dailySummary = useMemo(() => {
+    const itemMap = new Map(inventory.map(item => [item.id, item]));
     const days = getDaysArray(7); // past 7 days for quick summary list
     return days.map(dateStr => {
       const dayTx = transactions.filter(t => t.date === dateStr);
       const sales = dayTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
       const purchases = dayTx.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
       const expenses = dayTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-      const profit = sales - purchases - expenses;
+      const cogs = dayTx
+        .filter(t => t.type === 'sale' && t.itemId && t.quantity)
+        .reduce((sum, t) => sum + ((itemMap.get(t.itemId!)?.unitCost || 0) * (t.quantity || 0)), 0);
+      const profit = sales - cogs - expenses;
       
       return { date: dateStr, sales, outflows: purchases + expenses, profit };
     });
-  }, [transactions]);
+  }, [transactions, inventory]);
 
   // 2. Weekly Trend Calculations (last 4 weeks)
   const weeklyTrendData = useMemo(() => {
@@ -95,11 +99,13 @@ export const Reports: React.FC = () => {
     const purchases = filtered.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
     const expenses = filtered.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
+    const cogs = inventory.reduce((sum, item) => sum + item.cogs, 0);
+
     return {
       sales,
       purchases,
       expenses,
-      profit: sales - purchases - expenses
+      profit: sales - cogs - expenses
     };
   }, [transactions, reportPeriod]);
 

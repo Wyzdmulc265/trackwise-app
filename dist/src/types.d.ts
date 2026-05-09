@@ -38,6 +38,7 @@ export interface InventoryItem {
     lowStockThreshold: number;
     salesCount: number;
     revenue: number;
+    cogs: number;
 }
 export interface Transaction {
     id: string;

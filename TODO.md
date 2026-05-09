@@ -1,19 +1,10 @@
 # TODO
 
-## Step 1: Fix approvals pending endpoint
-- [ ] Add explicit route `GET /api/approvals/pending` (or equivalent) in `server/routes/approvals.ts`.
-- [ ] Ensure it filters `pending_approvals` by `tenant_id` and `status = 'pending'` and returns `approvals` + `count` like the list endpoint.
+## Gross Profit / Profit / Inventory Cost Fix
 
-## Step 2: Fix refresh token duplicate key on refresh
-- [ ] Update `server/utils/tokens.ts` `storeRefreshToken()` to avoid inserting duplicate `refresh_tokens.token`.
-- [ ] Implement one of: revoke/replace prior record for that user, and/or `INSERT ... ON CONFLICT (token) DO UPDATE`.
-- [ ] Verify no 23505 duplicate key occurs during repeated `/api/auth/refresh` calls.
-
-## Step 3: Smoke test
-- [x] Restart dev server (to be done).
-
-- [ ] Call `GET /api/approvals/pending` and confirm 200 (requires valid access token / session).
-
-- [ ] Trigger refresh flow and confirm 200 and no 23505.
-
+- [x] Step 1: Fix server inventory `cogs` updates during transaction lifecycle (create/update/delete) for `sale` operations.
+- [x] Step 2: Fix approval execution logic (`server/routes/approvals.ts`) to apply the same `cogs` updates for approved transaction actions.
+- [x] Step 3: Ensure inventory price/cost fields are not missing from API responses/TS types (smoke check).
+- [x] Step 4: Align `src/components/Reports.tsx` profit/gross profit computations with `Dashboard` (consistent `cogs` approach).
+- [ ] Step 5: Run typecheck/build + quick runtime sanity checks (create purchase -> sale -> verify dashboard/report numbers).
 

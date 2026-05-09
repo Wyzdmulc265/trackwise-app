@@ -36,8 +36,7 @@ router.get('/pending', authenticate, requireAdmin, requireTenant, async (req: Re
 router.get('/', authenticate, requireAdmin, requireTenant, async (req: Request, res: Response) => {
   try {
     const { businessKey } = req.params;
-    const statusParam = (req.params as any).status || 'pending';
-
+    const statusParam = typeof req.query.status === 'string' ? req.query.status : 'pending';
 
     const validStatus = ['pending', 'approved', 'rejected', 'all'];
     const statusFilter = validStatus.includes(statusParam) && statusParam !== 'all'
@@ -134,10 +133,15 @@ router.post('/:approvalId/approve', authenticate, requireAdmin, requireTenant, a
             [txId, businessKey, payload.type, payload.date, payload.category, payload.amount, payload.description, payload.itemId || null, payload.quantity || null, apr.requested_by]
           );
 
-          if (payload.itemId && payload.quantity) {
+            if (payload.itemId && payload.quantity) {
             if (payload.type === 'sale') {
               await client.query(
-                `UPDATE inventory_items SET quantity = GREATEST(0, quantity - $1), revenue = revenue + $2 WHERE id = $3`,
+                `UPDATE inventory_items
+                   SET quantity = GREATEST(0, quantity - $1),
+                       sales_count = sales_count + $1,
+                       revenue = revenue + $2,
+                       cogs = cogs + ($1 * unit_cost)
+                 WHERE id = $3`,
                 [payload.quantity, payload.amount, payload.itemId]
               );
             } else if (payload.type === 'purchase') {
@@ -181,7 +185,15 @@ router.post('/:approvalId/approve', authenticate, requireAdmin, requireTenant, a
           if (oldItemId !== newItemId || oldQty !== newQty || oldType !== newType) {
             if (oldItemId && oldQty) {
               if (oldType === 'sale') {
-                await client.query(`UPDATE inventory_items SET quantity = quantity + $1, revenue = revenue - $2 WHERE id = $3`, [oldQty, oldAmount, oldItemId]);
+                await client.query(
+                  `UPDATE inventory_items
+                     SET quantity = quantity + $1,
+                         sales_count = GREATEST(0, sales_count - $1),
+                         revenue = revenue - $2,
+                         cogs = cogs - ($1 * unit_cost)
+                   WHERE id = $3`,
+                  [oldQty, oldAmount, oldItemId]
+                );
               } else if (oldType === 'purchase') {
                 await client.query(`UPDATE inventory_items SET quantity = quantity - $1 WHERE id = $2`, [oldQty, oldItemId]);
               }
@@ -189,11 +201,24 @@ router.post('/:approvalId/approve', authenticate, requireAdmin, requireTenant, a
 
             if (newItemId && newQty) {
               if (newType === 'sale') {
-                await client.query(`UPDATE inventory_items SET quantity = GREATEST(0, quantity - $1), revenue = revenue + $2 WHERE id = $3`, [newQty, newAmount, newItemId]);
+                await client.query(
+                  `UPDATE inventory_items
+                     SET quantity = GREATEST(0, quantity - $1),
+                         sales_count = sales_count + $1,
+                         revenue = revenue + $2,
+                         cogs = cogs + ($1 * unit_cost)
+                   WHERE id = $3`,
+                  [newQty, newAmount, newItemId]
+                );
               } else if (newType === 'purchase') {
                 await client.query(`UPDATE inventory_items SET quantity = quantity + $1 WHERE id = $2`, [newQty, newItemId]);
               }
             }
+          } else if (oldItemId && oldQty && oldType === 'sale' && newItemId && newQty && newType === 'sale' && oldItemId === newItemId && oldQty === newQty && oldAmount !== newAmount) {
+            await client.query(
+              `UPDATE inventory_items SET revenue = revenue + $1 WHERE id = $2`,
+              [newAmount - oldAmount, newItemId]
+            );
           }
         } else if (apr.action === 'delete' && apr.target_id) {
           const txToDeleteResult = await client.query('SELECT * FROM transactions WHERE id = $1', [apr.target_id]);
@@ -202,7 +227,12 @@ router.post('/:approvalId/approve', authenticate, requireAdmin, requireTenant, a
             if (txToDelete.item_id && txToDelete.quantity) {
               if (txToDelete.type === 'sale') {
                 await client.query(
-                  `UPDATE inventory_items SET quantity = quantity + $1, revenue = revenue - $2, sales_count = sales_count - $3 WHERE id = $4`,
+                  `UPDATE inventory_items
+                     SET quantity = quantity + $1,
+                         revenue = revenue - $2,
+                         sales_count = sales_count - $3,
+                         cogs = cogs - ($3 * unit_cost)
+                   WHERE id = $4`,
                   [txToDelete.quantity, txToDelete.amount, txToDelete.quantity, txToDelete.item_id]
                 );
               } else if (txToDelete.type === 'purchase') {

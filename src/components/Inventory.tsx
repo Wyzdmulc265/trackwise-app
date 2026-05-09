@@ -38,11 +38,14 @@ export const Inventory: React.FC = () => {
     if (!name || !sku) return;
 
     const result = await addInventoryItem({
-      name, sku,
+      name,
+      sku,
       unitCost: parseFloat(unitCost) || 0,
       unitPrice: parseFloat(unitPrice) || 0,
       quantity: parseInt(quantity) || 0,
       lowStockThreshold: parseInt(threshold) || 3,
+
+
     });
 
     if (!result.ok) { showToast('error', result.message); return; }
