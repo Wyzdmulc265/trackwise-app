@@ -167,7 +167,8 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Do an immediate sync (so it feels instant when switching tabs/users)
     syncPendingApprovals();
 
-    const intervalMs = 5000;
+    // Poll less frequently to stay under the global 100-request / 15-minute API rate limit.
+    const intervalMs = 30_000;
     const id = window.setInterval(syncPendingApprovals, intervalMs);
 
     return () => {
