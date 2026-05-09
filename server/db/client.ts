@@ -12,8 +12,9 @@ const config: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
-  // Reduce false negatives during local dev / first-time DB startup
   connectionTimeoutMillis: 10000,
+  // Neon PostgreSQL requires SSL
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
 };
 
 if (!process.env.DATABASE_URL) {

@@ -89,9 +89,31 @@ const app: Application = express();
        },
      })
    );
- } else {
-   app.use(helmet());
- }
+  } else {
+    // Production CSP: allow inline module scripts for single-file build,
+    // and tighten other directives for security
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'", "https:", "data:"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'none'"],
+            upgradeInsecureRequests: [],
+          },
+        },
+      })
+    );
+  }
 app.use(requestLogger);
 
 // Dynamic CORS configuration
