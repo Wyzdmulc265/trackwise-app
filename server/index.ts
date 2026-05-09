@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import pkg from 'pg';
 
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
@@ -23,6 +24,11 @@ const requiredEnvVars = {
   JWT_REFRESH_EXPIRY: { optional: true },
   DATABASE_URL: {},
 };
+
+const { Pool } = pkg;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
 
 const isInsecure = (value: string) => {
   const v = value.toLowerCase();
