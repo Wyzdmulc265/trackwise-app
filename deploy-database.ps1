@@ -1,108 +1,179 @@
-# TrackWise Database Deployment Script
-# PowerShell version for Windows deployment
+# TrackWise Neon PostgreSQL Deployment Script
+# PowerShell version for Windows deployment to Neon
 
 param(
-    [Parameter(Mandatory=$false)]
-    [string]$ResourceGroup = "trackwise-rg",
-
-    [Parameter(Mandatory=$false)]
-    [string]$Location = "eastus",
-
-    [Parameter(Mandatory=$false)]
-    [string]$ServerName = "trackwise-postgres-$((New-Guid).ToString().Substring(0,8).ToLower())",
-
     [Parameter(Mandatory=$true)]
-    [string]$AdminPassword,
+    [string]$NeonConnectionString,
 
     [Parameter(Mandatory=$false)]
-    [string]$VnetName = "trackwise-vnet",
-
-    [Parameter(Mandatory=$false)]
-    [string]$SubnetName = "postgresql-subnet",
-
-    [Parameter(Mandatory=$false)]
-    [string]$DatabaseName = "trackwise"
+    [switch]$LoadSampleData
 )
 
 # Colors for output
-$Green = "Green"
-$Yellow = "Yellow"
-$Red = "Red"
-$Cyan = "Cyan"
+$consoleColors = @{
+    Green  = "Green"
+    Yellow = "Yellow"
+    Red    = "Red"
+    Cyan   = "Cyan"
+    White  = "White"
+    Gray   = "Gray"
+}
 
-Write-Host "TrackWise Database Deployment Script" -ForegroundColor $Green
-Write-Host "==================================" -ForegroundColor $Green
+function Write-Info($message) { Write-Host $message -ForegroundColor $consoleColors.Cyan }
+function Write-Success($message) { Write-Host $message -ForegroundColor $consoleColors.Green }
+function Write-Warning($message) { Write-Host $message -ForegroundColor $consoleColors.Yellow }
+function Write-ErrorMsg($message) { Write-Host $message -ForegroundColor $consoleColors.Red }
 
-# Check if Azure CLI is installed
-if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-    Write-Host "Error: Azure CLI is not installed. Please install it first." -ForegroundColor $Red
+Write-Host "TrackWise Neon Database Deployment Script" -ForegroundColor $consoleColors.Green
+Write-Host "=========================================" -ForegroundColor $consoleColors.Green
+
+# Check if psql is available
+$psqlPath = Get-Command psql -ErrorAction SilentlyContinue
+if (-not $psqlPath) {
+    Write-ErrorMsg "Error: psql command not found. Please install PostgreSQL client tools."
+    Write-Warning "Download from: https://www.postgresql.org/download/windows/"
+    Write-Warning "Or install via Chocolatey: choco install postgresql16"
     exit 1
 }
 
-# Check if logged in
+# Ensure PostgreSQL bin is in PATH for SSL libs
+$psqlDir = Split-Path $psqlPath.Path -Parent
+$env:Path = "$psqlDir;$env:Path"
+
+# Normalize and validate connection string
+# Convert postgresql:// to postgres:// (psql expects postgres://)
+if ($NeonConnectionString -like "postgresql://*") {
+    $NeonConnectionString = $NeonConnectionString -replace "postgresql://", "postgres://"
+}
+# Remove channel_binding parameter if present (not needed for psql)
+$NeonConnectionString = $NeonConnectionString -replace '([?&])channel_binding=require(&|$)', '$1'
+$NeonConnectionString = $NeonConnectionString -replace '[?&]$', ''
+
+# Validate format
+if ($NeonConnectionString -notmatch "^postgres://") {
+    Write-ErrorMsg "Error: Connection string must start with 'postgres://'"
+    Write-Warning "Get the correct format from Neon dashboard (psql format)"
+    exit 1
+}
+
+Write-Info "Connecting to Neon PostgreSQL database..."
+
+# Extract and verify hostname
+if ($NeonConnectionString -match "postgres://[^:]+:[^@]+@([^/]+)") {
+    $hostname = $Matches[1]
+    Write-Host "Target host: $hostname" -ForegroundColor $consoleColors.Gray
+
+    try {
+        $ipResult = [System.Net.Dns]::GetHostAddresses($hostname) 2>$null
+        if ($ipResult) {
+            Write-Success "✓ DNS resolved to: $($ipResult.IPAddressToString -join ', ')"
+        } else {
+            Write-ErrorMsg "✗ DNS resolution failed for $hostname"
+            Write-Warning "Possible causes:"
+            Write-Host "  1. Incorrect hostname (should end with .neon.tech)" -ForegroundColor $consoleColors.Yellow
+            Write-Host "  2. Network/firewall blocking DNS" -ForegroundColor $consoleColors.Yellow
+            Write-Host "  3. Internet connectivity issue" -ForegroundColor $consoleColors.Yellow
+            Write-Info "Solutions:"
+            Write-Host "  - Verify connection string in Neon dashboard" -ForegroundColor $consoleColors.White
+            Write-Host "  - Test: nslookup $hostname" -ForegroundColor $consoleColors.White
+            Write-Host "  - Try a different network (mobile hotspot)" -ForegroundColor $consoleColors.White
+            exit 1
+        }
+    } catch {
+        Write-Warning "Could not verify DNS: $_"
+    }
+}
+
+# Test connection
+Write-Info "Testing database connection..."
 try {
-    $account = az account show 2>$null | ConvertFrom-Json
+    $testResult = & psql $NeonConnectionString -c "SELECT version();" --no-psqlrc 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-ErrorMsg "✗ Connection failed (exit code: $LASTEXITCODE)"
+        Write-Host "Output:" -ForegroundColor $consoleColors.Yellow
+        Write-Host $testResult -ForegroundColor $consoleColors.Red
+        Write-Info "Troubleshooting:"
+        Write-Host "  1. Verify connection string in Neon dashboard" -ForegroundColor $consoleColors.White
+        Write-Host "  2. Check password (special chars may need URL encoding)" -ForegroundColor $consoleColors.White
+        Write-Host "  3. Ensure database is active in Neon console" -ForegroundColor $consoleColors.White
+        Write-Host "  4. Try manually: psql `"$NeonConnectionString`"" -ForegroundColor $consoleColors.White
+        exit 1
+    }
+    Write-Success "✓ Connected successfully"
+    Write-Host $testResult -ForegroundColor $consoleColors.Gray
 } catch {
-    Write-Host "Error: Not logged in to Azure. Please run 'az login' first." -ForegroundColor $Red
+    Write-ErrorMsg "✗ Connection error: $_"
     exit 1
 }
 
-Write-Host "Deploying Azure PostgreSQL Flexible Server..." -ForegroundColor $Yellow
+# Get project directory
+$scriptPath = $PSScriptRoot
+if (-not $scriptPath) { $scriptPath = $PWD.Path }
 
-# Create resource group if it doesn't exist
-Write-Host "Creating resource group: $ResourceGroup" -ForegroundColor $Cyan
-az group create --name $ResourceGroup --location $Location --output none
+# Apply types and functions
+$typesFile = Join-Path $scriptPath "database/types_and_functions.sql"
+if (Test-Path $typesFile) {
+    Write-Info "Applying custom types and functions..."
+    try {
+        psql $NeonConnectionString -f $typesFile 2>&1 | Out-Host
+        Write-Success "✓ Types and functions applied"
+    } catch {
+        Write-Warning "Warning: Could not apply types_and_functions.sql: $_"
+    }
+} else {
+    Write-Warning "Skipping types_and_functions.sql (not found)"
+}
 
-# Create virtual network and subnet
-Write-Host "Creating virtual network and subnet..." -ForegroundColor $Cyan
-az network vnet create `
-    --resource-group $ResourceGroup `
-    --name $VnetName `
-    --address-prefix 10.0.0.0/16 `
-    --subnet-name $SubnetName `
-    --subnet-prefix 10.0.1.0/24 `
-    --output none
+# Apply main schema
+$schemaFile = Join-Path $scriptPath "database/schema.sql"
+if (-not (Test-Path $schemaFile)) {
+    Write-ErrorMsg "Error: schema.sql not found at $schemaFile"
+    exit 1
+}
 
-# Deploy PostgreSQL server
-Write-Host "Deploying PostgreSQL Flexible Server..." -ForegroundColor $Cyan
-az deployment group create `
-    --resource-group $ResourceGroup `
-    --template-file infrastructure/postgresql.bicep `
-    --parameters `
-        serverName=$ServerName `
-        administratorLoginPassword=$AdminPassword `
-        virtualNetworkName=$VnetName `
-        databaseName=$DatabaseName `
-        allowPublicAccess=false `
-    --output none
+Write-Info "Applying database schema..."
+try {
+    psql $NeonConnectionString -f $schemaFile 2>&1 | Out-Host
+    Write-Success "✓ Schema applied successfully"
+} catch {
+    Write-ErrorMsg "Error: Failed to apply schema: $_"
+    exit 1
+}
 
-# Get server details
-$serverFqdn = az postgres flexible-server show `
-    --resource-group $ResourceGroup `
-    --name $ServerName `
-    --query fullyQualifiedDomainName -o tsv
+# Load sample data if requested
+if ($LoadSampleData) {
+    $sampleFile = Join-Path $scriptPath "database/sample_data.sql"
+    if (Test-Path $sampleFile) {
+        Write-Info "Loading sample data..."
+        try {
+            psql $NeonConnectionString -f $sampleFile 2>&1 | Out-Host
+            Write-Success "✓ Sample data loaded"
+        } catch {
+            Write-Warning "Warning: Could not load sample data: $_"
+        }
+    } else {
+        Write-Warning "Skipping sample_data.sql (not found)"
+    }
+}
 
-Write-Host "PostgreSQL server deployed successfully!" -ForegroundColor $Green
-Write-Host "Server: $ServerName" -ForegroundColor $Cyan
-Write-Host "FQDN: $serverFqdn" -ForegroundColor $Cyan
-Write-Host "Database: $DatabaseName" -ForegroundColor $Cyan
+# Summary
 Write-Host ""
-
-# Wait for server to be ready
-Write-Host "Waiting for server to be ready..." -ForegroundColor $Yellow
-Start-Sleep -Seconds 30
-
-# Create database schema instructions
-Write-Host "Next steps:" -ForegroundColor $Yellow
-Write-Host "1. Connect to the database using a PostgreSQL client:" -ForegroundColor $Cyan
-Write-Host "   psql 'host=$serverFqdn port=5432 user=trackwiseadmin dbname=$DatabaseName sslmode=require'" -ForegroundColor $Cyan
+Write-Success "Neon PostgreSQL Database Ready!"
+Write-Host "================================" -ForegroundColor $consoleColors.Green
+Write-Host "Connection String: $NeonConnectionString" -ForegroundColor $consoleColors.Cyan
 Write-Host ""
-Write-Host "2. Run the schema files in order:" -ForegroundColor $Cyan
-Write-Host "   \i database/types_and_functions.sql" -ForegroundColor $Cyan
-Write-Host "   \i database/schema.sql" -ForegroundColor $Cyan
+Write-Info "Next steps:"
+Write-Host "1. Update environment variables (.env.production or Render dashboard):" -ForegroundColor $consoleColors.Cyan
+Write-Host "   DATABASE_URL=$NeonConnectionString" -ForegroundColor $consoleColors.White
 Write-Host ""
-Write-Host "3. Or run the complete schema:" -ForegroundColor $Cyan
-Write-Host "   \i database/schema.sql" -ForegroundColor $Cyan
+Write-Host "2. Set these additional variables:" -ForegroundColor $consoleColors.Cyan
+Write-Host "   NODE_ENV=production" -ForegroundColor $consoleColors.White
+Write-Host "   JWT_SECRET=<openssl rand -base64 64>" -ForegroundColor $consoleColors.White
+Write-Host "   JWT_REFRESH_SECRET=<openssl rand -base64 64>" -ForegroundColor $consoleColors.White
+Write-Host "   CORS_ORIGIN=https://your-frontend.onrender.com" -ForegroundColor $consoleColors.White
+Write-Host "   VITE_API_URL=https://your-backend.onrender.com/api" -ForegroundColor $consoleColors.White
 Write-Host ""
-
-Write-Host "Deployment completed successfully!" -ForegroundColor $Green
+Write-Host "3. Rebuild and redeploy:" -ForegroundColor $consoleColors.Cyan
+Write-Host "   npm run build" -ForegroundColor $consoleColors.White
+Write-Host ""
+Write-Success "Schema loaded! Neon is ready for TrackWise."

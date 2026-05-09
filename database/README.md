@@ -15,7 +15,7 @@ Download and install PostgreSQL 14+ from: https://www.postgresql.org/download/wi
 Open PowerShell and run:
 
 ```powershell
-cd C:\Users\wisdo\Desktop\projects\trackwise-feature-specifications\ (1)
+cd C:\Users\wisdo\Desktop\projects\trackwise-feature-specifications
 .\setup-local-postgres.ps1 -PostgresPassword "your_postgres_password"
 ```
 
