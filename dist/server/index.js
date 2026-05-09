@@ -5,7 +5,6 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import pkg from 'pg';
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
 import categoriesRoutes from './routes/categories.js';
@@ -22,10 +21,11 @@ const requiredEnvVars = {
     JWT_REFRESH_EXPIRY: { optional: true },
     DATABASE_URL: {},
 };
-const { Pool } = pkg;
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
-});
+/**
+ * NOTE:
+ * DB connections are managed in `server/db/client.ts` (shared Pool + diagnostics).
+ * Keep `server/index.ts` free of duplicate Pool initialization.
+ */
 const isInsecure = (value) => {
     const v = value.toLowerCase();
     return (v.includes('change-in-production') ||
@@ -148,7 +148,11 @@ app.use('/api/transactions', transactionsRoutes);
 app.use('/api/approvals', approvalsRoutes);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const frontendRoot = path.resolve(__dirname, '..');
+// Serve from dist folder in production, project root in development
+const isProduction = process.env.NODE_ENV === 'production';
+const frontendRoot = isProduction
+    ? path.resolve(__dirname, '..', 'dist')
+    : path.resolve(__dirname, '..');
 const frontendIndex = path.join(frontendRoot, 'index.html');
 app.use(express.static(frontendRoot, { index: false }));
 app.use((req, res, next) => {

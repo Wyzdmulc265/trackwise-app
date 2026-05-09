@@ -9,7 +9,8 @@ const config = {
     connectionString: process.env.DATABASE_URL,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    // Reduce false negatives during local dev / first-time DB startup
+    connectionTimeoutMillis: 10000,
 };
 if (!process.env.DATABASE_URL) {
     console.warn('WARNING: DATABASE_URL not set. Using default local connection.');
@@ -26,7 +27,13 @@ pool.connect()
     client.release();
 })
     .catch(err => {
-    console.error('❌ Failed to connect to PostgreSQL:', err.message);
+    const e = err;
+    console.error('❌ Failed to connect to PostgreSQL:', {
+        name: e.name,
+        code: e.code,
+        message: e.message,
+        hint: 'Check DATABASE_URL connectivity (host/port), ensure PostgreSQL is running, and verify firewall/network access.',
+    });
     process.exit(1);
 });
 // Generic query helper - returns array of rows
