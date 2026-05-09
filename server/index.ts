@@ -91,7 +91,9 @@ const app: Application = express();
    );
   } else {
     // Production CSP: allow inline module scripts for single-file build,
-    // and tighten other directives for security
+    // and allow API backend from environment
+    const allowedApiOrigins = process.env.API_ALLOWED_ORIGINS?.split(',').map(s => s.trim()) || [];
+    
     app.use(
       helmet({
         contentSecurityPolicy: {
@@ -100,7 +102,7 @@ const app: Application = express();
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"],
+            connectSrc: ["'self'", ...allowedApiOrigins],
             fontSrc: ["'self'", "https:", "data:"],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
