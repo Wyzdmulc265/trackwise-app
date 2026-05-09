@@ -1,10 +1,15 @@
-# TODO
-
-## Gross Profit / Profit / Inventory Cost Fix
-
-- [x] Step 1: Fix server inventory `cogs` updates during transaction lifecycle (create/update/delete) for `sale` operations.
-- [x] Step 2: Fix approval execution logic (`server/routes/approvals.ts`) to apply the same `cogs` updates for approved transaction actions.
-- [x] Step 3: Ensure inventory price/cost fields are not missing from API responses/TS types (smoke check).
-- [x] Step 4: Align `src/components/Reports.tsx` profit/gross profit computations with `Dashboard` (consistent `cogs` approach).
-- [ ] Step 5: Run typecheck/build + quick runtime sanity checks (create purchase -> sale -> verify dashboard/report numbers).
-
+- [ ] DB: Add `measurement_unit` column to `inventory_items` (safe default)
+- [ ] DB: Update `database/tables/inventory_items.sql` to reflect the new column (schema consistency)
+- [ ] Backend: Update `server/routes/inventory.ts` to:
+  - include `measurement_unit` in GET list + GET single
+  - validate/accept `measurementUnit` on POST create
+  - validate/accept `measurementUnit` on PUT update
+  - persist `measurement_unit` on create/update
+  - include it in approval payload snapshot + returned item
+- [ ] Frontend: Update `src/context/TrackWiseContext.tsx` `normalizeInventoryItem` to map `measurementUnit` from API
+- [ ] Frontend UI: Update `src/components/Inventory.tsx` to:
+  - add measurement unit dropdown (Litres, Pieces (pcs), KG) in add form
+  - send `measurementUnit` in `addInventoryItem(...)` payload
+  - include unit in edit modal
+  - display unit next to quantity in inventory table
+- [ ] Verification: run TypeScript build / tests / smoke test add + refresh + approval flow

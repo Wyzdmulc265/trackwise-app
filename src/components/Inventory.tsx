@@ -18,7 +18,7 @@ export const Inventory: React.FC = () => {
     setTimeout(() => setToast(null), 4500);
   };
 
-   // Creation state
+  // Creation state
    const [showAddForm, setShowAddForm] = useState(false);
    const [name, setName] = useState('');
    const [sku, setSku] = useState('');
@@ -41,18 +41,17 @@ export const Inventory: React.FC = () => {
     const result = await addInventoryItem({
       name,
       sku,
+      measurementUnit,
       unitCost: parseFloat(unitCost) || 0,
       unitPrice: parseFloat(unitPrice) || 0,
       quantity: parseInt(quantity) || 0,
       lowStockThreshold: parseInt(threshold) || 3,
-
-
     });
 
     if (!result.ok) { showToast('error', result.message); return; }
     showToast('success', result.queued ? '⏳ ' + result.message : '✓ ' + result.message);
 
-    setName(''); setSku(''); setUnitCost(''); setUnitPrice(''); setQuantity(''); setThreshold('5');
+    setName(''); setSku(''); setUnitCost(''); setUnitPrice(''); setQuantity(''); setThreshold('5'); setMeasurementUnit('Pieces');
     setShowAddForm(false);
   };
 
@@ -188,6 +187,21 @@ export const Inventory: React.FC = () => {
             </div>
 
             <div>
+              <label htmlFor="measurementUnit" className="block text-[11px] font-semibold text-slate-500 mb-1">Measurement Unit</label>
+              <select
+                id="measurementUnit"
+                name="measurementUnit"
+                value={measurementUnit}
+                onChange={(e) => setMeasurementUnit(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="Litres">Litres</option>
+                <option value="Pieces (pcs)">Pieces (pcs)</option>
+                <option value="KG">KG</option>
+              </select>
+            </div>
+
+            <div>
               <label htmlFor="unitCost" className="block text-[11px] font-semibold text-slate-500 mb-1">Unit Cost Basis (MWK)</label>
               <input
                 id="unitCost"
@@ -290,7 +304,7 @@ export const Inventory: React.FC = () => {
                     <td className="py-4 px-6 text-center">
                       <div className="inline-flex items-center gap-2 bg-slate-100 rounded-lg px-2.5 py-1 font-bold">
                         <span className={isLow ? 'text-amber-600' : 'text-slate-800'}>{item.quantity}</span>
-                        <span className="text-slate-400 font-normal text-[10px]">units</span>
+                        <span className="text-slate-400 font-normal text-[10px]">{item.measurementUnit || 'Pieces'}</span>
                       </div>
                     </td>
                     <td className="py-4 px-6 text-right font-black text-slate-800">
@@ -417,6 +431,23 @@ export const Inventory: React.FC = () => {
                     className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-xl focus:outline-none"
                   />
                 </div>
+                <div>
+                  <label htmlFor="edit-measurementUnit" className="block text-[11px] font-bold text-slate-500 mb-1">Measurement Unit</label>
+                  <select
+                    id="edit-measurementUnit"
+                    name="measurementUnit"
+                    value={editingItem.measurementUnit}
+                    onChange={(e) => setEditingItem({ ...editingItem, measurementUnit: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-xl font-medium text-slate-800 focus:outline-none"
+                  >
+                    <option value="Litres">Litres</option>
+                    <option value="Pieces (pcs)">Pieces (pcs)</option>
+                    <option value="KG">KG</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-1">
                 <div>
                   <label htmlFor="edit-quantity" className="block text-[11px] font-bold text-slate-500 mb-1">Units physically on hand</label>
                   <input

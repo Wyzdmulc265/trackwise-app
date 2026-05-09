@@ -35,6 +35,7 @@ const normalizeInventoryItem = (item: any): InventoryItem => ({
   salesCount: parseNumber(item.salesCount ?? item.sales_count),
   revenue: parseNumber(item.revenue),
   cogs: parseNumber(item.cogs),
+  measurementUnit: item.measurementUnit ?? item.measurement_unit ?? 'Pieces',
 });
 
 export type MutationResult = { ok: true; queued: boolean; message: string } | { ok: false; message: string };

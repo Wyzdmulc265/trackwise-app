@@ -8,7 +8,10 @@ const router = Router();
 router.get('/', authenticate, requireTenant, async (req, res) => {
     try {
         const { businessKey } = req.params;
-        const items = await query(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
+        const items = await query(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice",
+              measurement_unit AS "measurementUnit",
+              quantity, low_stock_threshold AS "lowStockThreshold",
+              sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
        FROM inventory_items WHERE tenant_id = $1 ORDER BY name`, [businessKey]);
         res.json({ inventory: items, count: items.length });
     }
@@ -35,7 +38,10 @@ router.get('/low-stock', authenticate, requireTenant, async (req, res) => {
 router.get('/:itemId', authenticate, requireTenant, async (req, res) => {
     try {
         const { businessKey, itemId } = req.params;
-        const item = await queryOne(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
+        const item = await queryOne(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice",
+              measurement_unit AS "measurementUnit",
+              quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount",
+              revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
        FROM inventory_items WHERE id = $1 AND tenant_id = $2`, [itemId, businessKey]);
         if (!item) {
             throw new NotFoundError('Inventory item');
@@ -57,13 +63,19 @@ router.post('/', authenticate, requireTenant, async (req, res) => {
     try {
         const user = req.user;
         const { businessKey } = req.params;
-        const { name, sku, unitCost, unitPrice, quantity, lowStockThreshold } = z.object({
+        const { name, sku, unitCost, unitPrice, quantity, lowStockThreshold, measurementUnit } = z.object({
             name: z.string().min(1).max(255),
             sku: z.string().min(1).max(100),
             unitCost: z.number().min(0),
             unitPrice: z.number().min(0),
             quantity: z.number().int().min(0),
             lowStockThreshold: z.number().int().min(0).optional(),
+            measurementUnit: z
+                .string()
+                .min(1)
+                .max(50)
+                .optional()
+                .default('Pieces'),
         }).parse(req.body);
         const existing = await queryOne('SELECT id FROM inventory_items WHERE tenant_id = $1 AND LOWER(sku) = LOWER($2)', [businessKey, sku]);
         if (existing) {
@@ -72,7 +84,15 @@ router.post('/', authenticate, requireTenant, async (req, res) => {
         if (user.role === 'Accountant') {
             const approvalId = `apr_${Date.now()}`;
             await queryExecute(`INSERT INTO pending_approvals (id, tenant_id, kind, action, payload, requested_by, requested_at, status)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)`, [approvalId, businessKey, 'inventory', 'create', JSON.stringify({ name, sku, unitCost, unitPrice, quantity, lowStockThreshold }), user.username, 'pending']);
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)`, [
+                approvalId,
+                businessKey,
+                'inventory',
+                'create',
+                JSON.stringify({ name, sku, unitCost, unitPrice, quantity, lowStockThreshold, measurementUnit }),
+                user.username,
+                'pending',
+            ]);
             return res.status(202).json({
                 message: 'Inventory addition submitted for admin approval',
                 queued: true,
@@ -80,8 +100,9 @@ router.post('/', authenticate, requireTenant, async (req, res) => {
             });
         }
         const itemId = `inv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-        await queryExecute(`INSERT INTO inventory_items (id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0, NOW(), NOW())`, [itemId, businessKey, name, sku, unitCost, unitPrice, quantity, lowStockThreshold || 5]);
+        await queryExecute(`INSERT INTO inventory_items
+       (id, tenant_id, name, sku, unit_cost, unit_price, measurement_unit, quantity, low_stock_threshold, sales_count, revenue, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 0, NOW(), NOW())`, [itemId, businessKey, name, sku, unitCost, unitPrice, measurementUnit, quantity, lowStockThreshold || 5]);
         const item = await queryOne(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
        FROM inventory_items WHERE id = $1`, [itemId]);
         res.status(201).json({ item, message: 'Inventory item created successfully', queued: false });
@@ -112,6 +133,7 @@ router.put('/:itemId', authenticate, requireTenant, async (req, res) => {
             unitPrice: z.number().min(0).optional(),
             quantity: z.number().int().min(0).optional(),
             lowStockThreshold: z.number().int().min(0).optional(),
+            measurementUnit: z.string().min(1).max(50).optional(),
         }).parse(req.body);
         if (Object.keys(updates).length === 0) {
             res.status(400).json({ error: 'No fields to update' });
@@ -156,6 +178,10 @@ router.put('/:itemId', authenticate, requireTenant, async (req, res) => {
         if (updates.lowStockThreshold !== undefined) {
             setClause.push(`low_stock_threshold = $${values.length + 1}`);
             values.push(updates.lowStockThreshold);
+        }
+        if (updates.measurementUnit !== undefined) {
+            setClause.push(`measurement_unit = $${values.length + 1}`);
+            values.push(updates.measurementUnit);
         }
         setClause.push(`updated_at = NOW()`);
         values.push(itemId);

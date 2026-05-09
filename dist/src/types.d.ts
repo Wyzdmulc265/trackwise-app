@@ -39,6 +39,7 @@ export interface InventoryItem {
     salesCount: number;
     revenue: number;
     cogs: number;
+    measurementUnit: string;
 }
 export interface Transaction {
     id: string;
