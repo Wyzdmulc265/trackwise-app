@@ -44,19 +44,19 @@ export const Dashboard: React.FC = () => {
   const filteredTx = filterTransactions(transactions, timeFilter);
 
    // Compute stats
-   const sales = filteredTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
-   const purchases = filteredTx.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
-   const expenses = filteredTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-   
-   // Calculate COGS from inventory (lifetime COGS of all items)
-   const cogs = inventory.reduce((sum, item) => sum + item.cogs, 0);
+const sales = filteredTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + Number(t.amount), 0);
+  const purchases = filteredTx.filter(t => t.type === 'purchase').reduce((sum, t) => sum + Number(t.amount), 0);
+  const expenses = filteredTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+  
+  // Calculate COGS from inventory (lifetime COGS of all items)
+  const cogs = inventory.reduce((sum, item) => sum + Number(item.cogs), 0);
    const grossProfit = sales - cogs;
    const netProfit = grossProfit - expenses;
 
   // Inventory stats
-  const totalStockItems = inventory.reduce((sum, item) => sum + item.quantity, 0);
-  const totalStockValue = inventory.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0);
-  const lowStockItems = inventory.filter(item => item.quantity <= item.lowStockThreshold);
+  const totalStockItems = inventory.reduce((sum, item) => sum + Number(item.quantity), 0);
+  const totalStockValue = inventory.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitCost)), 0);
+  const lowStockItems = inventory.filter(item => Number(item.quantity) <= Number(item.lowStockThreshold));
 
   return (
     <div className="space-y-8 animate-fade-in">

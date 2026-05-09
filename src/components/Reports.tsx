@@ -34,12 +34,12 @@ export const Reports: React.FC = () => {
     const days = getDaysArray(7); // past 7 days for quick summary list
     return days.map(dateStr => {
       const dayTx = transactions.filter(t => t.date === dateStr);
-      const sales = dayTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
-      const purchases = dayTx.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
-      const expenses = dayTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const sales = dayTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + Number(t.amount), 0);
+      const purchases = dayTx.filter(t => t.type === 'purchase').reduce((sum, t) => sum + Number(t.amount), 0);
+      const expenses = dayTx.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
       const cogs = dayTx
         .filter(t => t.type === 'sale' && t.itemId && t.quantity)
-        .reduce((sum, t) => sum + ((itemMap.get(t.itemId!)?.unitCost || 0) * (t.quantity || 0)), 0);
+        .reduce((sum, t) => sum + ((Number(itemMap.get(t.itemId!)?.unitCost) || 0) * Number(t.quantity || 0)), 0);
       const profit = sales - cogs - expenses;
       
       return { date: dateStr, sales, outflows: purchases + expenses, profit };
@@ -66,8 +66,8 @@ export const Reports: React.FC = () => {
         return d >= start && d <= end;
       });
 
-      const sales = weekTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
-      const outflows = weekTx.filter(t => t.type !== 'sale').reduce((sum, t) => sum + t.amount, 0);
+      const sales = weekTx.filter(t => t.type === 'sale').reduce((sum, t) => sum + Number(t.amount), 0);
+      const outflows = weekTx.filter(t => t.type !== 'sale').reduce((sum, t) => sum + Number(t.amount), 0);
 
       return {
         name: w.name,
@@ -95,11 +95,11 @@ export const Reports: React.FC = () => {
       return diffDays <= parseInt(reportPeriod);
     });
 
-    const sales = filtered.filter(t => t.type === 'sale').reduce((sum, t) => sum + t.amount, 0);
-    const purchases = filtered.filter(t => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
-    const expenses = filtered.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const sales = filtered.filter(t => t.type === 'sale').reduce((sum, t) => sum + Number(t.amount), 0);
+    const purchases = filtered.filter(t => t.type === 'purchase').reduce((sum, t) => sum + Number(t.amount), 0);
+    const expenses = filtered.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
 
-    const cogs = inventory.reduce((sum, item) => sum + item.cogs, 0);
+    const cogs = inventory.reduce((sum, item) => sum + Number(item.cogs), 0);
 
     return {
       sales,

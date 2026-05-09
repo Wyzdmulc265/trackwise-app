@@ -8,7 +8,7 @@ const router = Router();
 router.get('/', authenticate, requireTenant, async (req, res) => {
     try {
         const { businessKey } = req.params;
-        const items = await query(`SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, cogs, created_at, updated_at
+        const items = await query(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
        FROM inventory_items WHERE tenant_id = $1 ORDER BY name`, [businessKey]);
         res.json({ inventory: items, count: items.length });
     }
@@ -35,7 +35,7 @@ router.get('/low-stock', authenticate, requireTenant, async (req, res) => {
 router.get('/:itemId', authenticate, requireTenant, async (req, res) => {
     try {
         const { businessKey, itemId } = req.params;
-        const item = await queryOne(`SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, cogs, created_at, updated_at
+        const item = await queryOne(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
        FROM inventory_items WHERE id = $1 AND tenant_id = $2`, [itemId, businessKey]);
         if (!item) {
             throw new NotFoundError('Inventory item');
@@ -82,7 +82,8 @@ router.post('/', authenticate, requireTenant, async (req, res) => {
         const itemId = `inv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         await queryExecute(`INSERT INTO inventory_items (id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0, NOW(), NOW())`, [itemId, businessKey, name, sku, unitCost, unitPrice, quantity, lowStockThreshold || 5]);
-        const item = await queryOne('SELECT * FROM inventory_items WHERE id = $1', [itemId]);
+        const item = await queryOne(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM inventory_items WHERE id = $1`, [itemId]);
         res.status(201).json({ item, message: 'Inventory item created successfully', queued: false });
     }
     catch (error) {
@@ -159,7 +160,8 @@ router.put('/:itemId', authenticate, requireTenant, async (req, res) => {
         setClause.push(`updated_at = NOW()`);
         values.push(itemId);
         await queryExecute(`UPDATE inventory_items SET ${setClause.join(', ')} WHERE id = $${values.length}`, values);
-        const updated = await queryOne('SELECT * FROM inventory_items WHERE id = $1', [itemId]);
+        const updated = await queryOne(`SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM inventory_items WHERE id = $1`, [itemId]);
         res.json({ item: updated, message: 'Inventory item updated successfully', queued: false });
     }
     catch (error) {

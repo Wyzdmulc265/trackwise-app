@@ -12,7 +12,7 @@ router.get('/', authenticate, requireTenant, async (req: Request, res: Response)
   try {
     const { businessKey } = req.params;
     const items = await query<any>(
-      `SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, cogs, created_at, updated_at
+      `SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
        FROM inventory_items WHERE tenant_id = $1 ORDER BY name`,
       [businessKey]
     );
@@ -47,7 +47,7 @@ router.get('/:itemId', authenticate, requireTenant, async (req: Request, res: Re
   try {
     const { businessKey, itemId } = req.params;
     const item = await queryOne<any>(
-      `SELECT id, tenant_id, name, sku, unit_cost, unit_price, quantity, low_stock_threshold, sales_count, revenue, cogs, created_at, updated_at
+      `SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
        FROM inventory_items WHERE id = $1 AND tenant_id = $2`,
       [itemId, businessKey]
     );
@@ -112,7 +112,11 @@ router.post('/', authenticate, requireTenant, async (req: Request, res: Response
       [itemId, businessKey, name, sku, unitCost, unitPrice, quantity, lowStockThreshold || 5]
     );
 
-    const item = await queryOne<any>('SELECT * FROM inventory_items WHERE id = $1', [itemId]);
+    const item = await queryOne<any>(
+      `SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM inventory_items WHERE id = $1`,
+      [itemId]
+    );
 
     res.status(201).json({ item, message: 'Inventory item created successfully', queued: false });
   } catch (error) {
@@ -189,7 +193,11 @@ router.put('/:itemId', authenticate, requireTenant, async (req: Request, res: Re
       values
     );
 
-    const updated = await queryOne<any>('SELECT * FROM inventory_items WHERE id = $1', [itemId]);
+    const updated = await queryOne<any>(
+      `SELECT id, tenant_id AS "tenantId", name, sku, unit_cost AS "unitCost", unit_price AS "unitPrice", quantity, low_stock_threshold AS "lowStockThreshold", sales_count AS "salesCount", revenue, cogs, created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM inventory_items WHERE id = $1`,
+      [itemId]
+    );
     res.json({ item: updated, message: 'Inventory item updated successfully', queued: false });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -8,6 +8,55 @@ import { AuthPayload } from '../types.js';
 
 const router = Router();
 
+const parseJsonValue = (value: unknown) => {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const createApprovalSummary = (approval: any): string => {
+  const { action, kind, payload, targetId } = approval;
+  if (action === 'create') {
+    if (kind === 'transaction' && payload?.type && payload?.category) {
+      return `Create ${payload.type} transaction for ${payload.category}`;
+    }
+    if (kind === 'inventory' && payload?.name) {
+      return `Add inventory item ${payload.name}`;
+    }
+  }
+  if (action === 'update') {
+    return `Update ${kind} ${targetId ?? ''}`.trim();
+  }
+  if (action === 'delete') {
+    return `Delete ${kind} ${targetId ?? ''}`.trim();
+  }
+  return `${action} ${kind}`;
+};
+
+const normalizeApproval = (apr: any) => {
+  const parsedPayload = parseJsonValue(apr.payload);
+  const parsedTargetSnapshot = parseJsonValue(apr.target_snapshot);
+  const approval = {
+    id: apr.id,
+    tenantId: apr.tenant_id,
+    kind: apr.kind,
+    action: apr.action,
+    payload: parsedPayload,
+    targetId: apr.target_id,
+    targetSnapshot: parsedTargetSnapshot,
+    requestedBy: apr.requested_by,
+    requestedAt: apr.requested_at,
+    status: apr.status,
+    reviewedBy: apr.reviewed_by,
+    reviewedAt: apr.reviewed_at,
+    rejectionReason: apr.review_notes,
+  };
+  return { ...approval, summary: createApprovalSummary(approval) };
+};
+
 // ─── GET all approvals ───────────────────────────────────────────────────────
 router.get('/pending', authenticate, requireAdmin, requireTenant, async (req: Request, res: Response) => {
   try {
@@ -19,11 +68,7 @@ router.get('/pending', authenticate, requireAdmin, requireTenant, async (req: Re
 
     const approvals = await query<any>(sql, [businessKey]);
 
-    const parsed = approvals.map((apr: any) => ({
-      ...apr,
-      payload: typeof apr.payload === 'string' ? JSON.parse(apr.payload) : apr.payload,
-      target_snapshot: typeof apr.target_snapshot === 'string' ? JSON.parse(apr.target_snapshot) : apr.target_snapshot,
-    }));
+    const parsed = approvals.map(normalizeApproval);
 
     res.json({ approvals: parsed, count: parsed.length });
   } catch (error) {
@@ -56,11 +101,7 @@ router.get('/', authenticate, requireAdmin, requireTenant, async (req: Request, 
 
     const approvals = await query<any>(sql, params);
 
-    const parsed = approvals.map((apr: any) => ({
-      ...apr,
-      payload: typeof apr.payload === 'string' ? JSON.parse(apr.payload) : apr.payload,
-      target_snapshot: typeof apr.target_snapshot === 'string' ? JSON.parse(apr.target_snapshot) : apr.target_snapshot,
-    }));
+    const parsed = approvals.map(normalizeApproval);
 
     res.json({ approvals: parsed, count: parsed.length });
   } catch (error) {
@@ -86,13 +127,7 @@ router.get('/:approvalId', authenticate, requireAdmin, requireTenant, async (req
 
     const apr = aprList[0];
 
-    res.json({
-      approval: {
-        ...apr,
-        payload: typeof apr.payload === 'string' ? JSON.parse(apr.payload) : apr.payload,
-        target_snapshot: typeof apr.target_snapshot === 'string' ? JSON.parse(apr.target_snapshot) : apr.target_snapshot,
-      },
-    });
+    res.json({ approval: normalizeApproval(apr) });
   } catch (error) {
     if (error instanceof NotFoundError) {
       res.status(404).json({ error: error.message });

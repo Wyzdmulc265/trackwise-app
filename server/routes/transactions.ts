@@ -15,7 +15,7 @@ router.get('/', authenticate, requireTenant, async (req: Request, res: Response)
     const { limit = 100, offset = 0, type, category, startDate, endDate } = req.query;
 
     let querySQL = `
-      SELECT id, tenant_id, type, date, category, amount, description, item_id, quantity, created_at, created_by, updated_at
+      SELECT id, tenant_id AS "tenantId", type, date, category, amount, description, item_id AS "itemId", quantity, created_at AS "createdAt", created_by AS "createdBy", updated_at AS "updatedAt"
       FROM transactions WHERE tenant_id = $1
     `;
     const params: unknown[] = [businessKey];
@@ -79,7 +79,7 @@ router.get('/:txId', authenticate, requireTenant, async (req: Request, res: Resp
   try {
     const { businessKey, txId } = req.params;
     const tx = await queryOne<any>(
-      `SELECT id, tenant_id, type, date, category, amount, description, item_id, quantity, created_at, created_by, updated_at
+      `SELECT id, tenant_id AS "tenantId", type, date, category, amount, description, item_id AS "itemId", quantity, created_at AS "createdAt", created_by AS "createdBy", updated_at AS "updatedAt"
        FROM transactions WHERE id = $1 AND tenant_id = $2`,
       [txId, businessKey]
     );
@@ -177,7 +177,11 @@ router.post('/', authenticate, requireTenant, async (req: Request, res: Response
       }
     });
 
-    const tx = await queryOne<any>('SELECT * FROM transactions WHERE id = $1', [txId]);
+    const tx = await queryOne<any>(
+      `SELECT id, tenant_id AS "tenantId", type, date, category, amount, description, item_id AS "itemId", quantity, created_at AS "createdAt", created_by AS "createdBy", updated_at AS "updatedAt"
+       FROM transactions WHERE id = $1`,
+      [txId]
+    );
 
     res.status(201).json({ transaction: tx, message: 'Transaction recorded successfully', queued: false });
   } catch (error) {
@@ -313,7 +317,11 @@ router.put('/:txId', authenticate, requireTenant, async (req: Request, res: Resp
       }
     });
 
-    const updated = await queryOne<any>('SELECT * FROM transactions WHERE id = $1', [txId]);
+    const updated = await queryOne<any>(
+      `SELECT id, tenant_id AS "tenantId", type, date, category, amount, description, item_id AS "itemId", quantity, created_at AS "createdAt", created_by AS "createdBy", updated_at AS "updatedAt"
+       FROM transactions WHERE id = $1`,
+      [txId]
+    );
     res.json({ transaction: updated, message: 'Transaction updated successfully', queued: false });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -8,6 +8,35 @@ import {
   approvalsApi,
 } from '../lib/api';
 
+const parseNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeTransaction = (tx: any): Transaction => ({
+  id: tx.id,
+  type: tx.type,
+  date: tx.date,
+  category: tx.category,
+  amount: parseNumber(tx.amount),
+  description: tx.description,
+  itemId: tx.itemId ?? tx.item_id,
+  quantity: tx.quantity !== undefined ? parseNumber(tx.quantity) : undefined,
+});
+
+const normalizeInventoryItem = (item: any): InventoryItem => ({
+  id: item.id,
+  name: item.name,
+  sku: item.sku,
+  unitCost: parseNumber(item.unitCost ?? item.unit_cost),
+  unitPrice: parseNumber(item.unitPrice ?? item.unit_price),
+  quantity: parseNumber(item.quantity),
+  lowStockThreshold: parseNumber(item.lowStockThreshold ?? item.low_stock_threshold),
+  salesCount: parseNumber(item.salesCount ?? item.sales_count),
+  revenue: parseNumber(item.revenue),
+  cogs: parseNumber(item.cogs),
+});
+
 export type MutationResult = { ok: true; queued: boolean; message: string } | { ok: false; message: string };
 
 interface TrackWiseContextProps {
@@ -70,8 +99,8 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         approvalsApi.list('pending'),
       ]);
 
-      if (txRes.data) setTransactions(txRes.data.transactions);
-      if (invRes.data) setInventory(invRes.data.inventory);
+      if (txRes.data) setTransactions(txRes.data.transactions.map(normalizeTransaction));
+      if (invRes.data) setInventory(invRes.data.inventory.map(normalizeInventoryItem));
       if (catRes.data) setCategories(catRes.data.categories);
       if (aprRes.data) setApprovals(aprRes.data.approvals);
     } catch (error) {
@@ -92,8 +121,8 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsLoading(true);
         Promise.all([transactionsApi.list(), inventoryApi.list(), categoriesApi.list()])
           .then(([txRes, invRes, catRes]) => {
-            if (txRes.data) setTransactions(txRes.data.transactions);
-            if (invRes.data) setInventory(invRes.data.inventory);
+            if (txRes.data) setTransactions(txRes.data.transactions.map(normalizeTransaction));
+            if (invRes.data) setInventory(invRes.data.inventory.map(normalizeInventoryItem));
             if (catRes.data) setCategories(catRes.data.categories);
             setApprovals([]); // no admin approvals for accountants
           })
@@ -168,7 +197,7 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // Direct creation - add to local state
       if (result.data?.transaction) {
-        setTransactions((prev) => [result.data!.transaction, ...prev]);
+        setTransactions((prev) => [normalizeTransaction(result.data!.transaction), ...prev]);
         // Also update inventory if item linked
         if (data.itemId && data.quantity !== undefined) {
           const itemId = data.itemId;
@@ -186,7 +215,7 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               } else if (data.type === 'purchase') {
                 q += qty;
               }
-              return { ...item, quantity: q, salesCount: sc, revenue: rev };
+              return normalizeInventoryItem({ ...item, quantity: q, salesCount: sc, revenue: rev });
             })
           );
         }
@@ -216,7 +245,7 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       if (result.data?.transaction) {
-        setTransactions((prev) => prev.map((tx) => (tx.id === id ? result.data!.transaction : tx)));
+        setTransactions((prev) => prev.map((tx) => (tx.id === id ? normalizeTransaction(result.data!.transaction) : tx)));
       }
 
       return { ok: true, queued: false, message: 'Transaction updated.' };
@@ -268,7 +297,7 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       if (result.data?.item) {
-        setInventory((prev) => [...prev, result.data!.item]);
+        setInventory((prev) => [...prev, normalizeInventoryItem(result.data!.item)]);
       }
 
       return { ok: true, queued: false, message: 'Product added to inventory.' };
@@ -295,7 +324,7 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       if (result.data?.item) {
-        setInventory((prev) => prev.map((item) => (item.id === id ? result.data!.item : item)));
+        setInventory((prev) => prev.map((item) => (item.id === id ? normalizeInventoryItem(result.data!.item) : item)));
       }
 
       return { ok: true, queued: false, message: 'Inventory updated.' };

@@ -10,7 +10,7 @@ router.get('/', authenticate, requireTenant, async (req, res) => {
         const { businessKey } = req.params;
         const { limit = 100, offset = 0, type, category, startDate, endDate } = req.query;
         let querySQL = `
-      SELECT id, tenant_id, type, date, category, amount, description, item_id, quantity, created_at, created_by, updated_at
+      SELECT id, tenant_id AS "tenantId", type, date, category, amount, description, item_id AS "itemId", quantity, created_at AS "createdAt", created_by AS "createdBy", updated_at AS "updatedAt"
       FROM transactions WHERE tenant_id = $1
     `;
         const params = [businessKey];
@@ -67,7 +67,7 @@ router.get('/', authenticate, requireTenant, async (req, res) => {
 router.get('/:txId', authenticate, requireTenant, async (req, res) => {
     try {
         const { businessKey, txId } = req.params;
-        const tx = await queryOne(`SELECT id, tenant_id, type, date, category, amount, description, item_id, quantity, created_at, created_by, updated_at
+        const tx = await queryOne(`SELECT id, tenant_id AS "tenantId", type, date, category, amount, description, item_id AS "itemId", quantity, created_at AS "createdAt", created_by AS "createdBy", updated_at AS "updatedAt"
        FROM transactions WHERE id = $1 AND tenant_id = $2`, [txId, businessKey]);
         if (!tx) {
             throw new NotFoundError('Transaction');
@@ -139,7 +139,8 @@ router.post('/', authenticate, requireTenant, async (req, res) => {
                 }
             }
         });
-        const tx = await queryOne('SELECT * FROM transactions WHERE id = $1', [txId]);
+        const tx = await queryOne(`SELECT id, tenant_id AS "tenantId", type, date, category, amount, description, item_id AS "itemId", quantity, created_at AS "createdAt", created_by AS "createdBy", updated_at AS "updatedAt"
+       FROM transactions WHERE id = $1`, [txId]);
         res.status(201).json({ transaction: tx, message: 'Transaction recorded successfully', queued: false });
     }
     catch (error) {
@@ -263,7 +264,8 @@ router.put('/:txId', authenticate, requireTenant, async (req, res) => {
                 await client.query(`UPDATE inventory_items SET revenue = revenue + $1 WHERE id = $2`, [newAmount - oldAmount, newItemId]);
             }
         });
-        const updated = await queryOne('SELECT * FROM transactions WHERE id = $1', [txId]);
+        const updated = await queryOne(`SELECT id, tenant_id AS "tenantId", type, date, category, amount, description, item_id AS "itemId", quantity, created_at AS "createdAt", created_by AS "createdBy", updated_at AS "updatedAt"
+       FROM transactions WHERE id = $1`, [txId]);
         res.json({ transaction: updated, message: 'Transaction updated successfully', queued: false });
     }
     catch (error) {
