@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTrackWise } from '../context/TrackWiseContext';
 import { useAuth } from '../context/AuthContext';
 import { InventoryItem } from '../types';
+import { formatCurrency } from '../utils/format';
 import { Plus, Package, ShieldAlert, BadgeDollarSign, Trash2, Edit3, X } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
@@ -66,10 +67,6 @@ export const Inventory: React.FC = () => {
     const result = await deleteInventoryItem(id);
     if (!result.ok) showToast('error', result.message);
     else showToast('success', result.queued ? '⏳ ' + result.message : '✓ ' + result.message);
-  };
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK', minimumFractionDigits: 2 }).format(val);
   };
 
   return (

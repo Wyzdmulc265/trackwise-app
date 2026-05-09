@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTrackWise } from '../context/TrackWiseContext';
 import { useAuth } from '../context/AuthContext';
 import { Transaction, TransactionType } from '../types';
+import { formatCurrency } from '../utils/format';
 import { 
   Search, 
   Filter, 
@@ -48,10 +49,6 @@ export const History: React.FC = () => {
 
     return matchesSearch && matchesType && matchesStart && matchesEnd;
   });
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK', minimumFractionDigits: 2 }).format(val);
-  };
 
   const handleOpenEdit = (tx: Transaction) => {
     setEditingTx({ ...tx });

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTrackWise } from '../context/TrackWiseContext';
+import { formatCurrency } from '../utils/format';
 import { 
   BarChart3, 
   Download, 
@@ -15,10 +16,6 @@ import {
 export const Reports: React.FC = () => {
   const { transactions, inventory } = useTrackWise();
   const [reportPeriod, setReportPeriod] = useState<'30' | '7' | 'all'>('30');
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK', minimumFractionDigits: 2 }).format(val);
-  };
 
   // Helper date parsing strings
   const getDaysArray = (numDays: number) => {

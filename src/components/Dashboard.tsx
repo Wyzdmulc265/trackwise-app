@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTrackWise } from '../context/TrackWiseContext';
 import { TimeFilter, Transaction } from '../types';
+import { formatCurrency } from '../utils/format';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -52,10 +53,6 @@ export const Dashboard: React.FC = () => {
   const totalStockItems = inventory.reduce((sum, item) => sum + item.quantity, 0);
   const totalStockValue = inventory.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0);
   const lowStockItems = inventory.filter(item => item.quantity <= item.lowStockThreshold);
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK', minimumFractionDigits: 2 }).format(val);
-  };
 
   return (
     <div className="space-y-8 animate-fade-in">
