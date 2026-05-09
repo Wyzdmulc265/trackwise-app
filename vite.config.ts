@@ -19,8 +19,8 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     if (single) prodPlugins.push(single as any);
   }
 
-  // API backend URL from environment
-  const viteApiUrl = import.meta.env.VITE_API_URL || '';
+  // API backend URL from environment (process.env available at build time)
+  const viteApiUrl = process.env.VITE_API_URL || '';
   let proxyTarget = 'http://localhost:3001';
   if (viteApiUrl && (viteApiUrl.startsWith('http://') || viteApiUrl.startsWith('https://'))) {
     try {
