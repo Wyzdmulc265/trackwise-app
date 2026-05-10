@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { User, AuthSession, UserRole } from '../types';
-import { authApi, refreshAuthTokens, usersApi } from '../lib/api';
+import { authApi, usersApi, refreshAuthTokens } from '../lib/api';
 
 interface AuthContextProps {
   session: AuthSession | null;
@@ -36,115 +36,118 @@ export interface CreateUserData {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on mount
+  // Initialize session from stored tokens
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('tw_access_token');
-      if (!token) {
+      const accessToken = localStorage.getItem('tw_access_token');
+      const refreshToken = localStorage.getItem('tw_refresh_token');
+
+      if (!accessToken || !refreshToken) {
         setIsLoading(false);
         return;
       }
 
-      // Try to fetch current session
+      // Try to get current session
       const result = await authApi.getMe();
-      if (result.data?.session) {
+      if (result.data) {
         setSession(result.data.session);
       } else {
-        // Token might be expired, try refresh
+        // Try to refresh tokens
         const refreshed = await refreshAuthTokens();
         if (refreshed) {
-          const retry = await authApi.getMe();
-          if (retry.data?.session) {
-            setSession(retry.data.session);
-            setIsLoading(false);
-            return;
+          const retryResult = await authApi.getMe();
+          if (retryResult.data) {
+            setSession(retryResult.data.session);
           }
         }
-        // Clear invalid tokens
-        localStorage.removeItem('tw_access_token');
-        localStorage.removeItem('tw_refresh_token');
       }
+
       setIsLoading(false);
     };
 
     initAuth();
   }, []);
 
-  const storeTokens = (accessToken: string, refreshToken: string) => {
-    localStorage.setItem('tw_access_token', accessToken);
-    localStorage.setItem('tw_refresh_token', refreshToken);
-  };
+  const login = useCallback(async (username: string, businessName: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const result = await authApi.login(username, businessName, password);
+      if (result.error) {
+        return { success: false, error: result.error };
+      }
 
-  const clearTokens = () => {
-    localStorage.removeItem('tw_access_token');
-    localStorage.removeItem('tw_refresh_token');
-  };
+      if (result.data) {
+        localStorage.setItem('tw_access_token', result.data.accessToken);
+        localStorage.setItem('tw_refresh_token', result.data.refreshToken);
+        setSession(result.data.user);
+        return { success: true };
+      }
 
-  const register = useCallback(async (data: RegisterData): Promise<{ success: boolean; error?: string }> => {
-    const result = await authApi.register(data);
-    if (result.error || !result.data) {
-      return { success: false, error: result.error || 'Registration failed' };
+      return { success: false, error: 'Login failed' };
+    } finally {
+      setIsLoading(false);
     }
-
-    // Store tokens and session
-    storeTokens(result.data.accessToken, result.data.refreshToken);
-    setSession(result.data.user);
-    return { success: true };
   }, []);
 
-  const login = useCallback(async (username: string, businessName: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    const result = await authApi.login(username, businessName, password);
-    if (result.error || !result.data) {
-      return { success: false, error: result.error || 'Login failed' };
-    }
+  const register = useCallback(async (data: RegisterData) => {
+    setIsLoading(true);
+    try {
+      const result = await authApi.register(data);
+      if (result.error) {
+        return { success: false, error: result.error };
+      }
 
-    storeTokens(result.data.accessToken, result.data.refreshToken);
-    setSession(result.data.user);
-    return { success: true };
+      if (result.data) {
+        localStorage.setItem('tw_access_token', result.data.accessToken);
+        localStorage.setItem('tw_refresh_token', result.data.refreshToken);
+        setSession(result.data.user);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Registration failed' };
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     const refreshToken = localStorage.getItem('tw_refresh_token');
     if (refreshToken) {
-      authApi.logout(refreshToken).catch(console.error);
+      await authApi.logout(refreshToken);
     }
-    clearTokens();
+
+    localStorage.removeItem('tw_access_token');
+    localStorage.removeItem('tw_refresh_token');
     setSession(null);
   }, []);
 
-  const changePassword = useCallback(async (currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     const result = await authApi.changePassword(currentPassword, newPassword);
     if (result.error) {
       return { success: false, error: result.error };
-    }
-    // Fetch updated session to check if password change is still required
-    const meResult = await authApi.getMe();
-    if (meResult.error || !meResult.data) {
-      // Fallback to logout if we can't fetch session
-      clearTokens();
-      setSession(null);
-    } else {
-      // Update session with fresh data
-      setSession(meResult.data.session);
     }
     return { success: true };
   }, []);
 
   const listBusinessUsers = useCallback(async (): Promise<User[]> => {
-    if (!session) return [];
     const result = await usersApi.list();
-    if (result.error || !result.data) {
-      console.error('Failed to fetch users:', result.error);
-      return [];
-    }
-    return result.data.users;
-  }, [session]);
+    if (result.error) throw new Error(result.error);
+    return result.data?.users || [];
+  }, []);
 
-  const createUser = useCallback(async (data: CreateUserData): Promise<{ success: boolean; error?: string }> => {
+  const createUser = useCallback(async (data: CreateUserData) => {
     const result = await usersApi.create(data);
     if (result.error) {
       return { success: false, error: result.error };
@@ -152,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   }, []);
 
-  const updateUser = useCallback(async (userId: string, fields: Partial<Pick<User, 'ownerName' | 'contact' | 'role'>>): Promise<{ success: boolean; error?: string }> => {
+  const updateUser = useCallback(async (userId: string, fields: Partial<Pick<User, 'ownerName' | 'contact' | 'role'>>) => {
     const result = await usersApi.update(userId, fields);
     if (result.error) {
       return { success: false, error: result.error };
@@ -160,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   }, []);
 
-  const deleteUser = useCallback(async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  const deleteUser = useCallback(async (userId: string) => {
     const result = await usersApi.delete(userId);
     if (result.error) {
       return { success: false, error: result.error };
@@ -168,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   }, []);
 
-  const resetUserPassword = useCallback(async (userId: string, tempPassword: string): Promise<{ success: boolean; error?: string }> => {
+  const resetUserPassword = useCallback(async (userId: string, tempPassword: string) => {
     const result = await usersApi.resetPassword(userId, tempPassword);
     if (result.error) {
       return { success: false, error: result.error };
@@ -176,29 +179,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        session,
-        isLoading,
-        login,
-        register,
-        logout,
-        changePassword,
-        listBusinessUsers,
-        createUser,
-        updateUser,
-        deleteUser,
-        resetUserPassword,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  const value: AuthContextProps = {
+    session,
+    isLoading,
+    login,
+    register,
+    logout,
+    changePassword,
+    listBusinessUsers,
+    createUser,
+    updateUser,
+    deleteUser,
+    resetUserPassword,
+  };
 
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -144,7 +144,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onGoToLogin }) => {
                   type="text"
                   required
                   autoComplete="username"
-                  placeholder="Unique login handle"
+                  placeholder="your-username"
                   value={form.username}
                   onChange={set('username')}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"

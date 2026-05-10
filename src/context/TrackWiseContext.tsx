@@ -286,14 +286,14 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setIsSubmitting(true);
     try {
-      const result = await inventoryApi.create(data);
+      const result = await inventoryApi.create(session.businessKey, data);
 
       if (result.error) {
         return { ok: false, message: result.error };
       }
 
       if (result.data?.queued) {
-        const aprRes = await approvalsApi.list('pending');
+        const aprRes = await approvalsApi.list(session.businessKey, 'pending');
         if (aprRes.data) setApprovals(aprRes.data.approvals);
         return { ok: true, queued: true, message: result.data.message || 'New product submitted for admin approval.' };
       }
@@ -320,7 +320,7 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       if (result.data?.queued) {
-        const aprRes = await approvalsApi.list('pending');
+        const aprRes = await approvalsApi.list(session.businessKey, 'pending');
         if (aprRes.data) setApprovals(aprRes.data.approvals);
         return { ok: true, queued: true, message: result.data.message || 'Inventory edit submitted for admin approval.' };
       }
@@ -361,18 +361,20 @@ export const TrackWiseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // ─── Categories ────────────────────────────────────────────────────────────
   const addCategory = useCallback(async (name: string, type: 'sale' | 'expense' | 'purchase') => {
-    const result = await categoriesApi.create(name, type);
+    if (!session) return;
+    const result = await categoriesApi.create(session.businessKey, name, type);
     if (!result.error && result.data?.category) {
       setCategories((prev) => [...prev, result.data!.category]);
     }
-  }, []);
+  }, [session]);
 
   const deleteCategory = useCallback(async (id: string) => {
-    const result = await categoriesApi.delete(id);
+    if (!session) return;
+    const result = await categoriesApi.delete(session.businessKey, id);
     if (!result.error) {
       setCategories((prev) => prev.filter((cat) => cat.id !== id));
     }
-  }, []);
+  }, [session]);
 
   // ─── Approval review ────────────────────────────────────────────────────────
   const approveRequest = useCallback(async (id: string): Promise<MutationResult> => {

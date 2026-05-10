@@ -58,24 +58,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToRegister }) => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Business Name */}
-            <div>
-              <label htmlFor="businessName" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                Business Name
-              </label>
-              <input
-                id="businessName"
-                name="businessName"
-                type="text"
-                required
-                autoComplete="organization"
-                placeholder="e.g. Chitsanzo General Dealers"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-              />
-            </div>
-
             {/* Username */}
             <div>
               <label htmlFor="username" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
@@ -87,9 +69,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onGoToRegister }) => {
                 type="text"
                 required
                 autoComplete="username"
-                placeholder="Your account username"
+                placeholder="your-username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
+              />
+            </div>
+
+            {/* Business Name */}
+            <div>
+              <label htmlFor="businessName" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Business Name
+              </label>
+              <input
+                id="businessName"
+                name="businessName"
+                type="text"
+                required
+                autoComplete="organization"
+                placeholder="your-business-name"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
               />
             </div>

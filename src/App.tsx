@@ -107,7 +107,7 @@ const AppContent: React.FC = () => {
               className="flex items-center gap-2.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all cursor-pointer"
             >
               <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400 font-black text-xs uppercase">
-                {session?.username?.charAt(0) ?? '?'}
+                {session?.email?.charAt(0) ?? '?'}
               </div>
               <div className="text-left hidden md:block">
                 <p className="text-xs font-bold text-slate-800 leading-tight">@{session?.username}</p>

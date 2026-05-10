@@ -13,12 +13,12 @@ export interface User {
   role: UserRole;
   mustChangePassword: boolean;
   createdAt: string;
-  createdBy?: string; // username of admin who created this account
+  createdBy?: string; // email of admin who created this account
 }
 
 export interface AuthSession {
   userId: string;
-  username: string;
+  email: string;
   businessName: string;
   ownerName: string;
   role: UserRole;
